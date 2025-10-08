@@ -23,7 +23,7 @@ class direccion(BaseModel):
 
     class Meta:
         db_table = 'direccion'
-        managed = False
+        managed = True
 
 class roles(BaseModel):
     nombre = models.CharField(max_length=100)
@@ -31,7 +31,7 @@ class roles(BaseModel):
 
     class Meta:
         db_table = 'roles'
-        managed = False
+        managed = True
 
 class departamento(BaseModel):
     nombre = models.CharField(max_length=45)
@@ -39,7 +39,7 @@ class departamento(BaseModel):
 
     class Meta:
         db_table = 'departamento'
-        managed = False
+        managed = True
 
 class cargo(BaseModel):
     nombre = models.CharField(max_length=45)
@@ -47,8 +47,7 @@ class cargo(BaseModel):
 
     class Meta:
         db_table = 'cargo'
-        managed = False
-
+        managed = True
 class empleado(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     run = models.CharField(max_length=45, unique=True)
@@ -57,7 +56,7 @@ class empleado(BaseModel):
 
     class Meta:
         db_table = 'empleado'
-        managed = False
+        managed = True
 
 class cuenta_bancaria(BaseModel):
     banco = models.CharField(max_length=45)
@@ -68,7 +67,7 @@ class cuenta_bancaria(BaseModel):
 
     class Meta:
         db_table = 'cuenta_bancaria'
-        managed = False
+        managed = True
 
 
 class turno(BaseModel):
@@ -77,7 +76,7 @@ class turno(BaseModel):
 
     class Meta:
         db_table = 'turno'
-        managed = False
+        managed =  True
 
 class jornada(BaseModel):
     nombre = models.CharField(max_length=45)
@@ -85,7 +84,7 @@ class jornada(BaseModel):
 
     class Meta:
         db_table = 'jornada'
-        managed = False
+        managed = True
 
 class turno_has_jornada(BaseModel):
     turno = models.ForeignKey('turno', on_delete=models.DO_NOTHING, db_column='turno_id')
@@ -93,7 +92,7 @@ class turno_has_jornada(BaseModel):
 
     class Meta:
         db_table = 'turno_has_jornada'
-        managed = False
+        managed = True
         unique_together = (('turno', 'jornada'),)
 
 class contrato(BaseModel):
@@ -108,7 +107,7 @@ class contrato(BaseModel):
 
     class Meta:
         db_table = 'contrato'
-        managed = False
+        managed = True
 
 class liquidacion(BaseModel):
     periodo = models.DateField()
@@ -129,7 +128,7 @@ class liquidacion(BaseModel):
 
     class Meta:
         db_table = 'liquidacion'
-        managed = False
+        managed = True
 
 class forma_pago(BaseModel):
     nombre = models.CharField(max_length=45)
@@ -137,7 +136,7 @@ class forma_pago(BaseModel):
 
     class Meta:
         db_table = 'forma_pago'
-        managed = False
+        managed = True
 
 class pago(BaseModel):
     fecha_pago = models.DateField()
@@ -150,5 +149,5 @@ class pago(BaseModel):
 
     class Meta:
         db_table = 'pago'
-        managed = False
+        managed = True
 
