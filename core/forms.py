@@ -7,16 +7,19 @@ class PagoForm(forms.ModelForm):
     class Meta:
         model = pago
         fields = "__all__"
+        error_messages = {
+            "monto": {"required": "El monto es obligatorio."},
+            "fecha_pago": {"required": "La fecha de pago es obligatoria."},
+        }
 
-    def clean(self):
-        cleaned_data = super().clean()
-        monto = cleaned_data.get("monto")
-        fecha_pago = cleaned_data.get("fecha_pago")
-
+    def clean_monto(self):
+        monto = self.cleaned_data.get("monto")
         if monto is not None and monto <= 0:
             raise ValidationError("El monto debe ser mayor que cero.")
+        return monto
 
-        if not fecha_pago:
+    def clean_fecha_pago(self):
+        fecha = self.cleaned_data.get("fecha_pago")
+        if not fecha:
             raise ValidationError("La fecha de pago es obligatoria.")
-
-        return cleaned_data
+        return fecha

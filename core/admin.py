@@ -5,6 +5,7 @@ from .models import (
 )
 from .forms import PagoForm
 
+
 # ---------- Helpers ----------
 BASE_READONLY = ("created_at", "updated_at")
 BASE_LIST = ("status",) + BASE_READONLY
@@ -153,5 +154,6 @@ class PagoAdmin(BaseAdmin):
     list_filter = ("estado", "forma_pago", "status")
     list_ordering = ("-fecha_pago", "liquidacion__contrato__empleado__run")
     actions = [make_active, make_inactive]
+    form = PagoForm
 
 
