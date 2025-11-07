@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Fornería</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
+    .brand { color:#dc3545; font-weight:700; }
+    .avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; }
+    .avatar-lg { width:90px; height:90px; border-radius:50%; object-fit:cover; }
+    .table thead th { white-space: nowrap; }
+    .card h5 { font-weight:700; }
+    .label-muted { font-size:.85rem; color:#6c757d; }
+  </style>
+</head>
+<body class="bg-light">
+
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#"><span class="h4 m-0 brand">Fornería</span></a>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <img src="https://via.placeholder.com/90" alt="mifoto" class="avatar">
+        <span class="fw-semibold" id="navUserName">Renato Muñoz (Admin)</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="row g-4">
+      <!-- COLUMNA IZQUIERDA -->
+      <div class="col-12 col-lg-8">
+
+        <!-- EMPLEADOS -->
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <h5 class="m-0">Empleados</h5>
+              <div class="d-flex gap-2">
+                <input id="inputBuscar" class="form-control form-control-sm" placeholder="Buscar por nombre, cargo o zona" />
+                <button class="btn btn-outline-secondary btn-sm" id="btnLimpiar">Limpiar</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle" id="tablaEmpleados">
+                <thead class="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Empleado</th>
+                    <th>Cargo</th>
+                    <th>Zona</th>
+                    <th>Horario</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody><!-- filas dinámicas --></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- MI ZONA DE TRABAJO -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            <h5 class="card-title">Mi zona de trabajo</h5>
+            <p class="mb-2"><strong>Área:</strong> Administración — RRHH</p>
+            <p class="mb-2"><strong>Ubicación:</strong> Oficina Central, Piso 2</p>
+            <p class="mb-2"><strong>Supervisor(a):</strong> Dirección General</p>
+            <p class="mb-0"><strong>Notas:</strong> Reunión semanal con jefaturas de área (miércoles 12:00).</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMNA DERECHA -->
+      <div class="col-12 col-lg-4">
+        <!-- PERFIL ADMIN -->
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <img src="https://via.placeholder.com/160" alt="mifoto" class="avatar-lg">
+              <div>
+                <h5 class="mb-1" id="profileName">Renato Muñoz</h5>
+                <span class="badge text-bg-danger">Admin</span>
+              </div>
+            </div>
+            <div class="mb-2">
+              <small class="text-muted d-block">Correo</small>
+              <span id="profileEmail">renato.munoz@forneria.cl</span>
+            </div>
+            <div class="mb-2">
+              <small class="text-muted d-block">Teléfono</small>
+              <span id="profilePhone">+56 9 1234 5678</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MIS LIQUIDACIONES -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title m-0">Mis liquidaciones</h5>
+              <a href="liquidacion.html" class="btn btn-outline-primary btn-sm">Ver todas</a>
+            </div>
+            <div class="mt-3">
+              <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
+                <span>Octubre 2025</span>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-primary">Ver</button>
+                  <button class="btn btn-sm btn-outline-secondary">PDF</button>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Septiembre 2025</span>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-primary">Ver</button>
+                  <button class="btn btn-sm btn-outline-secondary">PDF</button>
+                </div>
+              </div>
+            </div>
+            <a href="horario_jornada.html" class="btn btn-outline-dark w-100 mt-3">Ver mis horarios</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFCANVAS VER/EDITAR EMPLEADO -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="offEmpleado" aria-labelledby="offEmpleadoLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offEmpleadoLabel">Empleado</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <img src="https://via.placeholder.com/120" alt="foto empleado" class="avatar-lg">
+        <div>
+          <h5 class="mb-0" id="vNombre">—</h5>
+          <small class="text-muted" id="vId">ID: -</small>
+        </div>
+      </div>
+
+      <!-- CARGO -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="label-muted">Cargo</div>
+            <div id="vCargo" class="fw-semibold">—</div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary" id="btnEditCargo">Editar</button>
+        </div>
+        <div class="mt-2 d-none" id="grpCargo">
+          <div class="input-group">
+            <input class="form-control" id="inCargo" placeholder="Ej: Operario, Jefe de Turno">
+            <button class="btn btn-primary" id="btnSaveCargo">Guardar</button>
+            <button class="btn btn-outline-secondary" id="btnCancelCargo">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ZONA -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="label-muted">Zona de trabajo</div>
+            <div id="vZona" class="fw-semibold">—</div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary" id="btnEditZona">Editar</button>
+        </div>
+        <div class="mt-2 d-none" id="grpZona">
+          <div class="input-group">
+            <input class="form-control" id="inZona" placeholder="Ej: Hornos, Producción, Tienda">
+            <button class="btn btn-primary" id="btnSaveZona">Guardar</button>
+            <button class="btn btn-outline-secondary" id="btnCancelZona">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HORARIO -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="label-muted">Horario</div>
+            <div id="vHorario" class="fw-semibold">—</div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary" id="btnEditHorario">Editar</button>
+        </div>
+        <div class="mt-2 d-none" id="grpHorario">
+          <div class="input-group">
+            <input class="form-control" id="inHorario" placeholder="Ej: 08:00-17:00 (L-V)">
+            <button class="btn btn-primary" id="btnSaveHorario">Guardar</button>
+            <button class="btn btn-outline-secondary" id="btnCancelHorario">Cancelar</button>
+          </div>
+          <div class="form-text">Formato sugerido: “HH:MM-HH:MM (días)”.</div>
+        </div>
+      </div>
+
+    
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // ======= Datos DEMO de empleados (puedes reemplazar por fetch a tu backend) =======
+    const empleados = [
+      { id:1, nombre:"María González", cargo:"Supervisora", zona:"Producción", horario:"08:00-17:00 (L-V)" },
+      { id:2, nombre:"Juan Pérez", cargo:"Operario", zona:"Hornos", horario:"08:00-17:00 (L-V)" },
+      { id:3, nombre:"Ana López", cargo:"Control Calidad", zona:"Calidad", horario:"09:00-18:00 (L-V)" },
+      { id:4, nombre:"Carlos Díaz", cargo:"Operario", zona:"Embalaje", horario:"07:00-15:00 (L-S)" },
+      { id:5, nombre:"Sofía Rivas", cargo:"Atención Tienda", zona:"Tienda", horario:"10:00-19:00 (L-D)" },
+      { id:6, nombre:"Pedro Castro", cargo:"Operario", zona:"Producción", horario:"08:00-17:00 (L-V)" },
+      { id:7, nombre:"Fernanda Ruiz", cargo:"Líder de Turno", zona:"Hornos", horario:"06:00-14:00 (L-S)" }
+    ];
+
+    // ======= Render tabla =========
+    const tbody = document.querySelector("#tablaEmpleados tbody");
+    const buscar = document.getElementById("inputBuscar");
+    const btnLimpiar = document.getElementById("btnLimpiar");
+
+    function renderTablaEmpleados(list) {
+      tbody.innerHTML = "";
+      list.forEach((e, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${e.nombre}</td>
+          <td>${e.cargo}</td>
+          <td>${e.zona}</td>
+          <td>${e.horario}</td>
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-primary btn-ver" data-id="${e.id}">Ver</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      // bind botones "Ver"
+      tbody.querySelectorAll(".btn-ver").forEach(btn => {
+        btn.addEventListener("click", () => abrirOffcanvas(parseInt(btn.dataset.id,10)));
+      });
+    }
+
+    function filtrarEmpleados(q) {
+      const term = q.trim().toLowerCase();
+      if (!term) return empleados;
+      return empleados.filter(e =>
+        e.nombre.toLowerCase().includes(term) ||
+        e.cargo.toLowerCase().includes(term) ||
+        e.zona.toLowerCase().includes(term) ||
+        e.horario.toLowerCase().includes(term)
+      );
+    }
+
+    buscar.addEventListener("input", () => renderTablaEmpleados(filtrarEmpleados(buscar.value)));
+    btnLimpiar.addEventListener("click", () => { buscar.value = ""; renderTablaEmpleados(empleados); });
+
+    // Inicial
+    renderTablaEmpleados(empleados);
+
+    // ======= Offcanvas y edición por categoría =======
+    const offEl = document.getElementById("offEmpleado");
+    const offCanvas = new bootstrap.Offcanvas(offEl);
+
+    const vId = document.getElementById("vId");
+    const vNombre = document.getElementById("vNombre");
+    const vCargo = document.getElementById("vCargo");
+    const vZona = document.getElementById("vZona");
+    const vHorario = document.getElementById("vHorario");
+
+    // grupos de edición
+    const grpCargo = document.getElementById("grpCargo");
+    const grpZona = document.getElementById("grpZona");
+    const grpHorario = document.getElementById("grpHorario");
+
+    const inCargo = document.getElementById("inCargo");
+    const inZona = document.getElementById("inZona");
+    const inHorario = document.getElementById("inHorario");
+
+    let currentId = null;
+
+    function abrirOffcanvas(id) {
+      currentId = id;
+      const emp = empleados.find(e => e.id === id);
+      if (!emp) return;
+      vNombre.textContent = emp.nombre;
+      vId.textContent = `ID: ${emp.id}`;
+      vCargo.textContent = emp.cargo;
+      vZona.textContent = emp.zona;
+      vHorario.textContent = emp.horario;
+
+      // esconder grupos de edición si quedaron abiertos
+      [grpCargo, grpZona, grpHorario].forEach(g => g.classList.add("d-none"));
+
+      offCanvas.show();
+    }
+
+    // helpers toggle
+    function toggleGrupo(grpEl, inputEl, valActual) {
+      inputEl.value = valActual || "";
+      grpEl.classList.remove("d-none");
+      inputEl.focus();
+    }
+    function cancelarGrupo(grpEl) {
+      grpEl.classList.add("d-none");
+    }
+
+    // CARGO
+    document.getElementById("btnEditCargo").addEventListener("click", () => {
+      toggleGrupo(grpCargo, inCargo, vCargo.textContent);
+    });
+    document.getElementById("btnCancelCargo").addEventListener("click", () => cancelarGrupo(grpCargo));
+    document.getElementById("btnSaveCargo").addEventListener("click", () => {
+      const emp = empleados.find(e => e.id === currentId);
+      if (!emp) return;
+      const nuevo = inCargo.value.trim();
+      if (!nuevo) return;
+      emp.cargo = nuevo;
+      vCargo.textContent = nuevo;
+      cancelarGrupo(grpCargo);
+      renderTablaEmpleados(filtrarEmpleados(buscar.value));
+      // Aquí iría el PUT al backend:
+      // fetch(`/api/empleados/${currentId}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({cargo:nuevo})});
+    });
+
+    // ZONA
+    document.getElementById("btnEditZona").addEventListener("click", () => {
+      toggleGrupo(grpZona, inZona, vZona.textContent);
+    });
+    document.getElementById("btnCancelZona").addEventListener("click", () => cancelarGrupo(grpZona));
+    document.getElementById("btnSaveZona").addEventListener("click", () => {
+      const emp = empleados.find(e => e.id === currentId);
+      if (!emp) return;
+      const nuevo = inZona.value.trim();
+      if (!nuevo) return;
+      emp.zona = nuevo;
+      vZona.textContent = nuevo;
+      cancelarGrupo(grpZona);
+      renderTablaEmpleados(filtrarEmpleados(buscar.value));
+      // PUT backend aquí
+    });
+
+    // HORARIO
+    document.getElementById("btnEditHorario").addEventListener("click", () => {
+      toggleGrupo(grpHorario, inHorario, vHorario.textContent);
+    });
+    document.getElementById("btnCancelHorario").addEventListener("click", () => cancelarGrupo(grpHorario));
+    document.getElementById("btnSaveHorario").addEventListener("click", () => {
+      const emp = empleados.find(e => e.id === currentId);
+      if (!emp) return;
+      const nuevo = inHorario.value.trim();
+      if (!nuevo) return;
+      emp.horario = nuevo;
+      vHorario.textContent = nuevo;
+      cancelarGrupo(grpHorario);
+      renderTablaEmpleados(filtrarEmpleados(buscar.value));
+      // PUT backend aquí
+    });
+  </script>
+</body>
+</html>
