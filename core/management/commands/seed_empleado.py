@@ -1,14 +1,24 @@
 # core/management/commands/seed_empleados.py
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from core.models import empleado
 
+User = get_user_model()
+
+ADMIN_USERNAME = "admin.rh"          # <- solo este será admin
+ADMIN_PASSWORD = "temp123456"        # <- puedes cambiarlo
+
 class Command(BaseCommand):
-    help = "Siembra datos iniciales para empleados"
+    help = "Siembra datos iniciales para empleados (admin + no-admin)"
 
     def handle(self, *args, **options):
         with transaction.atomic():
+            # crea/obtiene grupos (opcional pero útil)
+            grp_admin, _ = Group.objects.get_or_create(name="Admin")
+            grp_emp, _ = Group.objects.get_or_create(name="Empleado")
+
             empleados_data = [
                 {
                     "username": "admin.rh",
@@ -136,49 +146,71 @@ class Command(BaseCommand):
 
             for emp_data in empleados_data:
                 try:
-                    # Crear o obtener el usuario
+                    # crear/obtener usuario
                     user, user_created = User.objects.get_or_create(
                         username=emp_data["username"],
                         defaults={
                             "email": emp_data["email"],
                             "first_name": emp_data["first_name"],
                             "last_name": emp_data["last_name"],
-                            "is_staff": True,  # Para acceso al admin si es necesario
-                            "is_active": True
-                        }
+                            "is_active": True,
+                        },
                     )
-                    
+
+                    # actualizar campos base siempre
+                    user.email = emp_data["email"]
+                    user.first_name = emp_data["first_name"]
+                    user.last_name = emp_data["last_name"]
+
+                    # contraseña SIEMPRE con hash (nuevo o existente)
+                    user.set_password(emp_data["password"])
+
+                    # rol: solo admin.rh es admin, el resto empleado
+                    if emp_data["username"] == ADMIN_USERNAME:
+                        user.is_staff = True
+                        user.is_superuser = True
+                    else:
+                        user.is_staff = False
+                        user.is_superuser = False
+
+                    user.save()
+
+                    # grupos (opcional)
+                    if emp_data["username"] == ADMIN_USERNAME:
+                        user.groups.add(grp_admin)
+                        user.groups.remove(grp_emp)
+                    else:
+                        user.groups.add(grp_emp)
+                        user.groups.remove(grp_admin)
+
                     if user_created:
-                        user.set_password(emp_data["password"])
-                        user.save()
                         self.stdout.write(f"Usuario creado: {emp_data['username']}")
                     else:
-                        self.stdout.write(f"Usuario existente: {emp_data['username']}")
+                        self.stdout.write(f"Usuario actualizado: {emp_data['username']}")
 
-                    # Crear o actualizar el empleado
-                    empleado_obj, emp_created = empleado.objects.get_or_create(
+                    # crear/actualizar empleado (clave por RUN como ya tenías)
+                    emp_obj, emp_created = empleado.objects.get_or_create(
                         run=emp_data["empleado_data"]["run"],
                         defaults={
                             "user": user,
                             "fono": emp_data["empleado_data"]["fono"],
                             "nacionalidad": emp_data["empleado_data"]["nacionalidad"],
-                            "status": "ACTIVE"
-                        }
+                            "status": "ACTIVE",
+                        },
                     )
-                    
-                    if emp_created:
+
+                    if not emp_created:
+                        emp_obj.user = user
+                        emp_obj.fono = emp_data["empleado_data"]["fono"]
+                        emp_obj.nacionalidad = emp_data["empleado_data"]["nacionalidad"]
+                        emp_obj.status = "ACTIVE"
+                        emp_obj.save()
+                        self.stdout.write(f"Empleado actualizado: {emp_data['first_name']} {emp_data['last_name']}")
+                    else:
                         empleados_creados += 1
                         self.stdout.write(f"Empleado creado: {emp_data['first_name']} {emp_data['last_name']} (RUN: {emp_data['empleado_data']['run']})")
-                    else:
-                        # Actualizar empleado existente
-                        empleado_obj.user = user
-                        empleado_obj.fono = emp_data["empleado_data"]["fono"]
-                        empleado_obj.nacionalidad = emp_data["empleado_data"]["nacionalidad"]
-                        empleado_obj.status = "ACTIVE"
-                        empleado_obj.save()
-                        self.stdout.write(f"Empleado actualizado: {emp_data['first_name']} {emp_data['last_name']}")
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Error creando empleado {emp_data['username']}: {e}"))
 
-        self.stdout.write(self.style.SUCCESS(f"Se procesaron {len(empleados_data)} empleados, {empleados_creados} nuevos creados"))
+            self.stdout.write(self.style.SUCCESS(f"Se procesaron {len(empleados_data)} usuarios; empleados nuevos: {empleados_creados}"))

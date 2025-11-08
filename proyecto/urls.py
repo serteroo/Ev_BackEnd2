@@ -16,11 +16,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from django.views.generic import RedirectView
+from core import views as v
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", RedirectView.as_view(url="/admin/", permanent=False)),
+
+    # Páginas
+    path("", v.login_page, name="login_page"),                 # <<— raíz muestra tu login
+    path("login/", v.login_page),                              # alias opcional
+    path("dashboard/", v.dashboard_empleado, name="dash_empleado"),
+    path("dashboard-admin/", v.dashboard_admin, name="dash_admin"),
+
+    # API
+    path("api/login/", v.login_json, name="login_json"),
+    path("api/logout/", v.logout_view, name="logout"),
 ]
+
 
 
