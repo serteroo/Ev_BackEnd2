@@ -9,7 +9,7 @@
   <style>
     .brand{color:#dc3545;font-weight:700}
     .avatar{width:40px;height:40px;border-radius:50%;object-fit:cover}
-    .pdf-frame{width:100%;height:70vh;border:1px solid #e9ecef;border-radius:.5rem}
+    .pdf-frame{width:100%;height:70vh;border:1px solid #e9ecef;border-radius:.5rem;display:none}
     .table thead th{white-space:nowrap}
   </style>
 </head>
@@ -33,31 +33,33 @@
           <div class="card-body">
             <h6 class="card-title text-muted mb-3">NAVEGACIÓN</h6>
             <ul class="nav nav-pills flex-column gap-2">
+              {% with n=request.resolver_match.url_name %}
               <li class="nav-item">
-                <a class="nav-link" href="dashboard_admin.html">
+                <a class="nav-link {% if n == 'dash_admin' %}active{% endif %}" href="{% url 'dash_admin' %}">
                   <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="crud_cargo.html">
+                <a class="nav-link {% if n == 'crud_cargo' %}active{% endif %}" href="{% url 'crud_cargo' %}">
                   <i class="bi bi-briefcase me-2"></i>Gestión de Cargos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="contratos_admin.html">
+                <a class="nav-link {% if n == 'contratos_admin' %}active{% endif %}" href="{% url 'contratos_admin' %}">
                   <i class="bi bi-file-earmark-text me-2"></i>Contratos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="liquidacion.html">
+                <a class="nav-link {% if n == 'liquidaciones_admin' %}active{% endif %}" href="{% url 'liquidaciones_admin' %}">
                   <i class="bi bi-cash-coin me-2"></i>Liquidaciones
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="horario_jornada.html">
+                <a class="nav-link {% if n == 'horarios_admin' %}active{% endif %}" href="{% url 'horarios_admin' %}">
                   <i class="bi bi-clock me-2"></i>Horarios
                 </a>
               </li>
+              {% endwith %}
             </ul>
           </div>
         </div>
@@ -67,23 +69,20 @@
       <div class="col-lg-10 col-md-9">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h4 class="m-0">Contratos de empleados</h4>
-          <a class="btn btn-outline-secondary btn-sm" href="dashboard_admin.html">Volver al panel</a>
+          <div class="d-flex gap-2">
+            <a class="btn btn-primary btn-sm" href="{% url 'contrato_create' %}">
+              <i class="bi bi-plus-circle me-1"></i>Nuevo contrato
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'dash_admin' %}">Volver al panel</a>
+          </div>
         </div>
 
         <div class="card shadow-sm">
           <div class="card-body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
               <div class="d-flex gap-2">
-                <input id="q" class="form-control form-control-sm" placeholder="Buscar por nombre, cargo o estado">
+                <input id="q" class="form-control form-control-sm" placeholder="Buscar por empleado, cargo o departamento">
                 <button id="btnLimpiar" class="btn btn-outline-secondary btn-sm">Limpiar</button>
-              </div>
-              <div class="d-flex gap-2">
-                <select id="fEstado" class="form-select form-select-sm">
-                  <option value="">Estado: todos</option>
-                  <option value="Vigente">Vigente</option>
-                  <option value="Finalizado">Finalizado</option>
-                  <option value="En firma">En firma</option>
-                </select>
               </div>
             </div>
 
@@ -94,13 +93,46 @@
                     <th>#</th>
                     <th>Empleado</th>
                     <th>Cargo</th>
-                    <th>Tipo</th>
+                    <th>Departamento</th>
                     <th>Inicio</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th>Fin</th>
+                    <th class="text-nowrap">Acciones</th>
                   </tr>
                 </thead>
-                <tbody><!-- filas dinámicas --></tbody>
+                <tbody>
+                  {% for c in contratos %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ c.empleado }}</td>
+                    <td>{{ c.cargo }}</td>
+                    <td>{{ c.departamento }}</td>
+                    <td>{{ c.fecha_inicio|date:"d-m-Y" }}</td>
+                    <td>{{ c.fecha_fin|default:"—" }}</td>
+                    <td class="text-nowrap">
+                      <button
+                        class="btn btn-sm btn-outline-primary btn-ver"
+                        data-bs-toggle="offcanvas" data-bs-target="#offContrato"
+                        data-nombre="{{ c.empleado }}"
+                        data-cargo="{{ c.cargo }}"
+                        data-depto="{{ c.departamento }}"
+                        data-inicio="{{ c.fecha_inicio|date:"d-m-Y" }}"
+                        data-fin="{{ c.fecha_fin|default:'' }}"
+                        data-detalle="{{ c.detalle_contrato|default:'' }}"
+                        data-pdf="{% if c.pdf %}{{ c.pdf.url }}{% endif %}">
+                        Ver
+                      </button>
+                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'contrato_edit' c.id %}" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      <a class="btn btn-sm btn-outline-danger" href="{% url 'contrato_delete' c.id %}" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="7" class="text-center text-muted">Sin contratos.</td></tr>
+                  {% endfor %}
+                </tbody>
               </table>
             </div>
           </div>
@@ -119,17 +151,18 @@
       <div class="mb-3">
         <div class="fw-bold" id="cNombre">—</div>
         <div class="text-muted small" id="cCargo">—</div>
+        <div class="small text-muted" id="cDepto">—</div>
         <div class="mt-2">
-          <span class="badge text-bg-secondary" id="cTipo">—</span>
-          <span class="badge text-bg-success" id="cEstado">—</span>
+          <span class="badge text-bg-secondary" id="cDetalle" style="display:none"></span>
         </div>
         <div class="small text-muted mt-1" id="cFechas">—</div>
       </div>
 
-      <iframe class="pdf-frame" id="cPdf" src=""></iframe>
+      <iframe class="pdf-frame" id="cPdf" src="" title="PDF contrato"></iframe>
+      <div class="alert alert-light border d-none" id="sinPdf">Sin PDF adjunto para este contrato.</div>
 
       <div class="d-grid gap-2 mt-3">
-        <a class="btn btn-primary" id="btnDescargar" href="#" download>Descargar PDF</a>
+        <a class="btn btn-primary d-none" id="btnDescargar" href="#" download>Descargar PDF</a>
         <button class="btn btn-outline-secondary" id="btnImprimir">Imprimir</button>
       </div>
     </div>
@@ -137,102 +170,74 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Datos de ejemplo para contratos
-    const contratos = [
-      { id: 1, nombre: "María González", cargo: "Supervisora", tipo: "Indefinido", inicio: "2023-01-15", estado: "Vigente" },
-      { id: 2, nombre: "Juan Pérez", cargo: "Operario", tipo: "Plazo fijo", inicio: "2024-03-01", estado: "Vigente" },
-      { id: 3, nombre: "Ana López", cargo: "Control Calidad", tipo: "Indefinido", inicio: "2022-11-20", estado: "Vigente" },
-      { id: 4, nombre: "Carlos Díaz", cargo: "Operario", tipo: "Plazo fijo", inicio: "2024-06-10", estado: "En firma" },
-      { id: 5, nombre: "Sofía Rivas", cargo: "Atención Tienda", tipo: "Part-time", inicio: "2023-08-05", estado: "Vigente" },
-      { id: 6, nombre: "Pedro Castro", cargo: "Operario", tipo: "Indefinido", inicio: "2021-05-12", estado: "Finalizado" }
-    ];
+    // Filtro por texto (empleado/cargo/departamento) sobre filas ya renderizadas
+    const q = document.getElementById("q");
+    const btnLimpiar = document.getElementById("btnLimpiar");
+    const tbody = document.querySelector("#tablaContratos tbody");
 
-    // Renderizar tabla de contratos
-    function renderTablaContratos(lista = contratos) {
-      const tbody = document.querySelector("#tablaContratos tbody");
-      tbody.innerHTML = "";
-      
-      lista.forEach((contrato, index) => {
-        const tr = document.createElement("tr");
-        
-        // Determinar color del badge según estado
-        let badgeClass = "bg-secondary";
-        if (contrato.estado === "Vigente") badgeClass = "bg-success";
-        if (contrato.estado === "En firma") badgeClass = "bg-warning";
-        if (contrato.estado === "Finalizado") badgeClass = "bg-danger";
-        
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${contrato.nombre}</td>
-          <td>${contrato.cargo}</td>
-          <td>${contrato.tipo}</td>
-          <td>${new Date(contrato.inicio).toLocaleDateString()}</td>
-          <td><span class="badge ${badgeClass}">${contrato.estado}</span></td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary btn-ver" data-id="${contrato.id}">Ver</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      // Agregar eventos a los botones "Ver"
-      document.querySelectorAll(".btn-ver").forEach(btn => {
-        btn.addEventListener("click", () => abrirContrato(parseInt(btn.dataset.id)));
+    function filtrar() {
+      const term = q.value.trim().toLowerCase();
+      Array.from(tbody.rows).forEach(tr => {
+        const txt = tr.innerText.toLowerCase();
+        tr.style.display = txt.includes(term) ? "" : "none";
       });
     }
+    q.addEventListener("input", filtrar);
+    btnLimpiar.addEventListener("click", () => { q.value = ""; filtrar(); });
 
-    // Función para abrir el offcanvas del contrato
-    function abrirContrato(id) {
-      const contrato = contratos.find(c => c.id === id);
-      if (!contrato) return;
+    // Offcanvas "Ver" — carga los detalles usando data-*
+    const off = document.getElementById("offContrato");
+    const cNombre = document.getElementById("cNombre");
+    const cCargo  = document.getElementById("cCargo");
+    const cDepto  = document.getElementById("cDepto");
+    const cDetalle= document.getElementById("cDetalle");
+    const cFechas = document.getElementById("cFechas");
+    const cPdf    = document.getElementById("cPdf");
+    const sinPdf  = document.getElementById("sinPdf");
+    const btnDesc = document.getElementById("btnDescargar");
 
-      document.getElementById("cNombre").textContent = contrato.nombre;
-      document.getElementById("cCargo").textContent = contrato.cargo;
-      document.getElementById("cTipo").textContent = contrato.tipo;
-      document.getElementById("cEstado").textContent = contrato.estado;
-      document.getElementById("cFechas").textContent = `Inicio: ${new Date(contrato.inicio).toLocaleDateString()}`;
+    off.addEventListener("show.bs.offcanvas", (ev) => {
+      const btn = ev.relatedTarget;
+      if (!btn) return;
 
-      // Aquí iría la URL real del PDF
-      document.getElementById("cPdf").src = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
-      document.getElementById("btnDescargar").href = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+      const nombre = btn.getAttribute("data-nombre") || "—";
+      const cargo  = btn.getAttribute("data-cargo") || "—";
+      const depto  = btn.getAttribute("data-depto") || "—";
+      const inicio = btn.getAttribute("data-inicio") || "";
+      const fin    = btn.getAttribute("data-fin") || "";
+      const detalle= btn.getAttribute("data-detalle") || "";
+      const pdfUrl = btn.getAttribute("data-pdf") || "";
 
-      const offcanvas = new bootstrap.Offcanvas(document.getElementById('offContrato'));
-      offcanvas.show();
-    }
+      cNombre.textContent = nombre;
+      cCargo.textContent  = cargo;
+      cDepto.textContent  = "Departamento: " + depto;
 
-    // Función para filtrar contratos
-    function filtrarContratos() {
-      const texto = document.getElementById("q").value.toLowerCase();
-      const estado = document.getElementById("fEstado").value;
-      
-      const filtrados = contratos.filter(contrato => {
-        const coincideTexto = contrato.nombre.toLowerCase().includes(texto) || 
-                             contrato.cargo.toLowerCase().includes(texto) ||
-                             contrato.estado.toLowerCase().includes(texto);
-        const coincideEstado = !estado || contrato.estado === estado;
-        
-        return coincideTexto && coincideEstado;
-      });
-      
-      renderTablaContratos(filtrados);
-    }
+      if (detalle) {
+        cDetalle.style.display = "";
+        cDetalle.textContent = detalle;
+      } else {
+        cDetalle.style.display = "none";
+      }
 
-    // Event listeners
-    document.getElementById("q").addEventListener("input", filtrarContratos);
-    document.getElementById("fEstado").addEventListener("change", filtrarContratos);
-    document.getElementById("btnLimpiar").addEventListener("click", () => {
-      document.getElementById("q").value = "";
-      document.getElementById("fEstado").value = "";
-      renderTablaContratos(contratos);
+      const rango = inicio ? `Inicio: ${inicio}` + (fin ? ` — Fin: ${fin}` : "") : "—";
+      cFechas.textContent = rango;
+
+      if (pdfUrl) {
+        cPdf.src = pdfUrl;
+        cPdf.style.display = "";
+        btnDesc.href = pdfUrl;
+        btnDesc.classList.remove("d-none");
+        sinPdf.classList.add("d-none");
+      } else {
+        cPdf.removeAttribute("src");
+        cPdf.style.display = "none";
+        btnDesc.classList.add("d-none");
+        sinPdf.classList.remove("d-none");
+      }
     });
 
-    // Botón imprimir
-    document.getElementById("btnImprimir").addEventListener("click", () => {
-      window.print();
-    });
-
-    // Inicializar tabla
-    renderTablaContratos();
+    // Imprimir
+    document.getElementById("btnImprimir").addEventListener("click", () => window.print());
   </script>
 </body>
 </html>

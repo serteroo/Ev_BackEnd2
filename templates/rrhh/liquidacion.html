@@ -32,31 +32,33 @@
           <div class="card-body">
             <h6 class="card-title text-muted mb-3">NAVEGACIÓN</h6>
             <ul class="nav nav-pills flex-column gap-2">
+              {% with n=request.resolver_match.url_name %}
               <li class="nav-item">
-                <a class="nav-link" href="dashboard_admin.html">
+                <a class="nav-link {% if n == 'dash_admin' %}active{% endif %}" href="{% url 'dash_admin' %}">
                   <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="crud_cargo.html">
+                <a class="nav-link {% if n == 'crud_cargo' %}active{% endif %}" href="{% url 'crud_cargo' %}">
                   <i class="bi bi-briefcase me-2"></i>Gestión de Cargos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="contratos_admin.html">
+                <a class="nav-link {% if n == 'contratos_admin' %}active{% endif %}" href="{% url 'contratos_admin' %}">
                   <i class="bi bi-file-earmark-text me-2"></i>Contratos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="liquidacion.html">
+                <a class="nav-link {% if n == 'liquidaciones_admin' %}active{% endif %}" href="{% url 'liquidaciones_admin' %}">
                   <i class="bi bi-cash-coin me-2"></i>Liquidaciones
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="horario_jornada.html">
+                <a class="nav-link {% if n == 'horarios_admin' %}active{% endif %}" href="{% url 'horarios_admin' %}">
                   <i class="bi bi-clock me-2"></i>Horarios
                 </a>
               </li>
+              {% endwith %}
             </ul>
           </div>
         </div>
@@ -67,7 +69,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h4 class="m-0">Mis liquidaciones</h4>
           <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary btn-sm" href="dashboard_admin.html">Volver al dashboard</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'dash_admin' %}">Volver al dashboard</a>
             <button class="btn btn-outline-primary btn-sm" id="btnDescargarTodo">Descargar todo</button>
           </div>
         </div>
@@ -101,13 +103,11 @@
   </div>
 
   <script>
-    // ------- Datos demo (30 items = 3 páginas x 10) -------
     const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
     const data = [];
-    // Genera 30 liquidaciones (puedes reemplazar con tus datos reales desde backend)
     for (let i = 0; i < 30; i++) {
-      const mes = meses[(10 + i) % 12];     // solo para variar un poco
-      const anio = 2024 + Math.floor(i/12); // 2024–2026
+      const mes = meses[(10 + i) % 12];
+      const anio = 2024 + Math.floor(i/12);
       data.push({
         id: i + 1,
         mes,
@@ -117,12 +117,10 @@
       });
     }
 
-    // ------- Paginación -------
     const PAGE_SIZE = 10;
-    const TOTAL_PAGES = Math.ceil(data.length / PAGE_SIZE); // 3
+    const TOTAL_PAGES = Math.ceil(data.length / PAGE_SIZE);
     const STORAGE_KEY = "liqCurrentPage";
 
-    // Lee página inicial desde localStorage; fallback 1
     function getInitialPage() {
       const q = new URLSearchParams(location.search);
       if (q.has("page")) {
@@ -191,22 +189,18 @@
 
     function changePage(p) {
       currentPage = p;
-      localStorage.setItem(STORAGE_KEY, String(currentPage)); // recuerda página al recargar
+      localStorage.setItem(STORAGE_KEY, String(currentPage));
       renderTable(currentPage);
       renderPagination(currentPage);
-      // opcional: reflejar en URL sin recargar
       const url = new URL(location);
       url.searchParams.set("page", String(currentPage));
       history.replaceState({}, "", url);
-      // scroll arriba de la tabla
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    // Inicializa
     renderTable(currentPage);
     renderPagination(currentPage);
 
-    // Demo descargar todo
     document.getElementById("btnDescargarTodo").addEventListener("click", () => {
       alert("Aquí iría la descarga de todas las liquidaciones (implementación backend).");
     });

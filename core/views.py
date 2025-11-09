@@ -3,8 +3,13 @@ import json
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+from django.urls import reverse
+from .forms import ContratoForm
+from .models import contrato
+
 
 User = get_user_model()
 
@@ -53,20 +58,51 @@ def liquidacion_page(request):
     return render(request, 'rrhh/liquidacion.html')
 
 
+def is_admin(u):
+    return u.is_authenticated and u.is_staff
+
 @login_required
+@user_passes_test(is_admin, login_url='/')
 def contratos_admin_page(request):
-    # visible para admin
-    if _rol_de(request.user) != 'admin':
-        return redirect('dash_empleado')
-    return render(request, 'rrhh/contratos_admin.html')
-
+    contratos = contrato.objects.select_related('empleado', 'departamento', 'cargo').order_by('-fecha_inicio')
+    return render(request, 'rrhh/contratos_admin.html', {'contratos': contratos})
 
 @login_required
-def contrato_admin_page(request):
-    # visible para admin
-    if _rol_de(request.user) != 'admin':
-        return redirect('dash_empleado')
-    return render(request, 'rrhh/contrato.html')
+@user_passes_test(is_admin, login_url='/')
+def contrato_create(request):
+    if request.method == 'POST':
+        form = ContratoForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Contrato creado correctamente.')
+            return redirect('contratos_admin')
+    else:
+        form = ContratoForm()
+    return render(request, 'rrhh/contrato_form.html', {'form': form, 'titulo': 'Nuevo contrato'})
+
+@login_required
+@user_passes_test(is_admin, login_url='/')
+def contrato_edit(request, pk):
+    obj = get_object_or_404(contrato, pk=pk)
+    if request.method == 'POST':
+        form = ContratoForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Contrato actualizado.')
+            return redirect('contratos_admin')
+    else:
+        form = ContratoForm(instance=obj)
+    return render(request, 'rrhh/contrato_form.html', {'form': form, 'titulo': 'Editar contrato'})
+
+@login_required
+@user_passes_test(is_admin, login_url='/')
+def contrato_delete(request, pk):
+    obj = get_object_or_404(contrato, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, 'Contrato eliminado.')
+        return redirect('contratos_admin')
+    return render(request, 'rrhh/contrato_confirm_delete.html', {'obj': obj})
 
 
 # ---------- API ----------
@@ -124,3 +160,10 @@ def contrato_empleado_page(request):
 def liquidaciones_admin_page(request):
     # Listado de liquidaciones para el admin
     return render(request, 'rrhh/liquidacion.html')   # cambia el template si usas otro
+
+def is_admin(u):  # solo staff entra al CRUD
+    return u.is_authenticated and u.is_staff
+
+@user_passes_test(is_admin)
+def crud_cargo_page(request):
+    return render(request, 'rrhh/crud_cargo.html')

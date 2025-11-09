@@ -1,7 +1,7 @@
 # core/forms.py
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import pago
+from .models import pago, contrato
 
 class PagoForm(forms.ModelForm):
     class Meta:
@@ -23,3 +23,36 @@ class PagoForm(forms.ModelForm):
         if not fecha:
             raise ValidationError("La fecha de pago es obligatoria.")
         return fecha
+    
+class ContratoForm(forms.ModelForm):
+    class Meta:
+        model = contrato
+        fields = [
+            'empleado', 'departamento', 'cargo',
+            'turno_has_jornada',          # ← AÑADIDO
+            'fecha_inicio', 'fecha_fin',
+            'detalle_contrato', 'pdf',
+        ]
+        widgets = {
+            'fecha_inicio': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'fecha_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'detalle_contrato': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+
+    # Opcional: ordena y etiqueta bonitos los select
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            # aplica clase Bootstrap a todos los widgets que no la traigan
+            if not isinstance(field.widget, forms.CheckboxInput):
+                css = field.widget.attrs.get('class', '')
+                field.widget.attrs['class'] = (css + ' form-control').strip()
+
+        if 'empleado' in self.fields:
+            self.fields['empleado'].label_from_instance = lambda obj: f"{obj.run} — {obj}"
+        if 'cargo' in self.fields:
+            self.fields['cargo'].label_from_instance = lambda obj: obj.nombre
+        if 'departamento' in self.fields:
+            self.fields['departamento'].label_from_instance = lambda obj: obj.nombre
+        if 'turno_has_jornada' in self.fields:
+            self.fields['turno_has_jornada'].label = "Turno / Jornada"

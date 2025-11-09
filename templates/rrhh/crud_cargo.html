@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,27 +9,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <style>
-    body { 
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; 
-      background-color: #f8f9fa;
-    }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
     .brand { color:#dc3545; font-weight:700; }
     .avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; }
-    .table thead th { white-space: nowrap; background-color: #f8f9fa; }
+    .table thead th { white-space: nowrap; }
     .card h5 { font-weight:700; }
   </style>
 </head>
-<body>
+<body class="bg-light">
 
   <!-- NAV -->
-  <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top shadow-sm">
+  <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
     <div class="container-fluid">
-      <a class="navbar-brand" href="dashboard_admin.html">
-        <span class="h4 m-0 brand">Fornería</span>
-      </a>
+      <a class="navbar-brand" href="#"><span class="h4 m-0 brand">Fornería</span></a>
       <div class="ms-auto d-flex align-items-center gap-2">
         <img src="https://via.placeholder.com/90" alt="mifoto" class="avatar">
-        <span class="fw-semibold" id="navUserName">Renato Muñoz (Admin)</span>
+        <span class="fw-semibold">Renato Muñoz (Admin)</span>
       </div>
     </div>
   </nav>
@@ -41,31 +37,33 @@
           <div class="card-body">
             <h6 class="card-title text-muted mb-3">NAVEGACIÓN</h6>
             <ul class="nav nav-pills flex-column gap-2">
+              {% with n=request.resolver_match.url_name %}
               <li class="nav-item">
-                <a class="nav-link" href="dashboard_admin.html">
+                <a class="nav-link {% if n == 'dash_admin' %}active{% endif %}" href="{% url 'dash_admin' %}">
                   <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="crud_cargo.html">
+                <a class="nav-link {% if n == 'crud_cargo' %}active{% endif %}" href="{% url 'crud_cargo' %}">
                   <i class="bi bi-briefcase me-2"></i>Gestión de Cargos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="contratos_admin.html">
+                <a class="nav-link {% if n == 'contratos_admin' %}active{% endif %}" href="{% url 'contratos_admin' %}">
                   <i class="bi bi-file-earmark-text me-2"></i>Contratos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="liquidacion.html">
+                <a class="nav-link {% if n == 'liquidaciones_admin' %}active{% endif %}" href="{% url 'liquidaciones_admin' %}">
                   <i class="bi bi-cash-coin me-2"></i>Liquidaciones
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="horario_jornada.html">
+                <a class="nav-link {% if n == 'horarios_admin' %}active{% endif %}" href="{% url 'horarios_admin' %}">
                   <i class="bi bi-clock me-2"></i>Horarios
                 </a>
               </li>
+              {% endwith %}
             </ul>
           </div>
         </div>
@@ -73,37 +71,22 @@
 
       <!-- Contenido principal -->
       <div class="col-lg-10 col-md-9">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h2 class="h4 mb-1">Gestión de Cargos</h2>
-            <p class="text-muted mb-0">Administra los cargos de la empresa</p>
-          </div>
-          <button class="btn btn-primary" id="btnNuevoCargo">
-            <i class="bi bi-plus-circle me-2"></i>Nuevo Cargo
-          </button>
-        </div>
+        <h4 class="mb-3">Gestión de Cargos</h4>
 
-        <!-- Búsqueda simple -->
-        <div class="card shadow-sm mb-4">
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-8">
-                <label class="form-label">Buscar cargo</label>
-                <input type="text" class="form-control" id="inputBuscarCargo" placeholder="Buscar por nombre o descripción...">
-              </div>
-              <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-outline-secondary w-100" id="btnLimpiarBusqueda">
-                  <i class="bi bi-arrow-clockwise me-1"></i>Limpiar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tabla de cargos -->
         <div class="card shadow-sm">
           <div class="card-body">
+            <!-- Filtros -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <div class="d-flex gap-2 flex-grow-1">
+                <input id="q" class="form-control form-control-sm" placeholder="Buscar por nombre o descripción…">
+                <button id="btnLimpiar" class="btn btn-outline-secondary btn-sm">Limpiar</button>
+              </div>
+              <button id="btnNuevo" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>Nuevo Cargo
+              </button>
+            </div>
+
+            <!-- Tabla -->
             <div class="table-responsive">
               <table class="table table-hover align-middle" id="tablaCargos">
                 <thead class="table-light">
@@ -111,297 +94,47 @@
                     <th>#</th>
                     <th>Nombre del Cargo</th>
                     <th>Descripción</th>
-                    <th>Acciones</th>
+                    <th class="text-nowrap">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- Los cargos se cargarán dinámicamente -->
+                  <!-- filas demo -->
+                  <tr>
+                    <td>1</td>
+                    <td>Operario</td>
+                    <td>Encargado de operaciones básicas de producción</td>
+                    <td class="text-nowrap">
+                      <button class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square me-1"></i>Editar</button>
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Eliminar</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Supervisora</td>
+                    <td>Supervisa las operaciones del área de producción</td>
+                    <td class="text-nowrap">
+                      <button class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square me-1"></i>Editar</button>
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Eliminar</button>
+                    </td>
+                  </tr>
+                  <!-- agrega tus filas reales aquí -->
                 </tbody>
               </table>
             </div>
-            
-            <!-- Mensaje cuando no hay resultados -->
-            <div id="mensajeSinResultados" class="text-center py-5 d-none">
-              <i class="bi bi-search display-4 text-muted mb-3"></i>
-              <h5 class="text-muted">No se encontraron cargos</h5>
-              <p class="text-muted">Intenta ajustar la búsqueda o crear un nuevo cargo.</p>
-            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- MODAL PARA CREAR/EDITAR CARGO -->
-  <div class="modal fade" id="modalCargo" tabindex="-1" aria-labelledby="modalCargoLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalCargoLabel">Nuevo Cargo</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="formCargo">
-            <input type="hidden" id="cargoId">
-            <div class="mb-3">
-              <label for="nombreCargo" class="form-label">Nombre del Cargo <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="nombreCargo" required maxlength="45">
-              <div class="form-text">Máximo 45 caracteres</div>
-            </div>
-            <div class="mb-3">
-              <label for="descripcionCargo" class="form-label">Descripción</label>
-              <textarea class="form-control" id="descripcionCargo" rows="3" maxlength="45" placeholder="Descripción opcional del cargo..."></textarea>
-              <div class="form-text">Máximo 45 caracteres (opcional)</div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" id="btnGuardarCargo">
-            <i class="bi bi-check-circle me-1"></i>Guardar
-          </button>
-        </div>
-      </div>
+      </div><!-- /col principal -->
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // ======= Datos DEMO de cargos - Adaptados al modelo simple =======
-    let cargos = [
-      { 
-        id: 1, 
-        nombre: "Operario", 
-        descripcion: "Encargado de operaciones básicas de producción"
-      },
-      { 
-        id: 2, 
-        nombre: "Supervisora", 
-        descripcion: "Supervisa las operaciones del área de producción"
-      },
-      { 
-        id: 3, 
-        nombre: "Control Calidad", 
-        descripcion: "Realiza controles de calidad en productos"
-      },
-      { 
-        id: 4, 
-        nombre: "Atención Tienda", 
-        descripcion: "Atención al cliente en tienda"
-      },
-      { 
-        id: 5, 
-        nombre: "Líder de Turno",
-        descripcion: "Coordina las actividades del turno"
-      }
-    ];
-
-    // ======= Elementos del DOM =======
-    const tablaCargos = document.getElementById('tablaCargos').querySelector('tbody');
-    const btnNuevoCargo = document.getElementById('btnNuevoCargo');
-    const modalCargo = new bootstrap.Modal(document.getElementById('modalCargo'));
-    const formCargo = document.getElementById('formCargo');
-    const btnGuardarCargo = document.getElementById('btnGuardarCargo');
-    const inputBuscarCargo = document.getElementById('inputBuscarCargo');
-    const btnLimpiarBusqueda = document.getElementById('btnLimpiarBusqueda');
-    const mensajeSinResultados = document.getElementById('mensajeSinResultados');
-
-    // ======= Inicialización =======
-    document.addEventListener('DOMContentLoaded', function() {
-      renderTablaCargos();
-    });
-
-    // ======= Renderizar tabla de cargos =======
-    function renderTablaCargos(listaCargos = cargos) {
-      tablaCargos.innerHTML = '';
-      
-      if (listaCargos.length === 0) {
-        mensajeSinResultados.classList.remove('d-none');
-        return;
-      }
-      
-      mensajeSinResultados.classList.add('d-none');
-      
-      listaCargos.forEach((cargo, index) => {
-        const tr = document.createElement('tr');
-        
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td class="fw-semibold">${cargo.nombre}</td>
-          <td>${cargo.descripcion || '<span class="text-muted fst-italic">Sin descripción</span>'}</td>
-          <td class="text-nowrap">
-            <button class="btn btn-sm btn-outline-primary btn-editar-cargo" data-id="${cargo.id}">
-              <i class="bi bi-pencil"></i> Editar
-            </button>
-            <button class="btn btn-sm btn-outline-danger btn-eliminar-cargo" data-id="${cargo.id}">
-              <i class="bi bi-trash"></i> Eliminar
-            </button>
-          </td>
-        `;
-        tablaCargos.appendChild(tr);
-      });
-
-      // Agregar eventos a los botones
-      document.querySelectorAll('.btn-editar-cargo').forEach(btn => {
-        btn.addEventListener('click', () => editarCargo(parseInt(btn.dataset.id)));
-      });
-
-      document.querySelectorAll('.btn-eliminar-cargo').forEach(btn => {
-        btn.addEventListener('click', () => eliminarCargo(parseInt(btn.dataset.id)));
-      });
-    }
-
-    // ======= Filtrar cargos =======
-    function filtrarCargos() {
-      const textoBusqueda = inputBuscarCargo.value.trim().toLowerCase();
-      
-      if (!textoBusqueda) {
-        renderTablaCargos(cargos);
-        return;
-      }
-      
-      const cargosFiltrados = cargos.filter(cargo => {
-        const coincideNombre = cargo.nombre.toLowerCase().includes(textoBusqueda);
-        const coincideDescripcion = cargo.descripcion && cargo.descripcion.toLowerCase().includes(textoBusqueda);
-        
-        return coincideNombre || coincideDescripcion;
-      });
-      
-      renderTablaCargos(cargosFiltrados);
-    }
-
-    // ======= Nuevo cargo =======
-    btnNuevoCargo.addEventListener('click', () => {
-      document.getElementById('modalCargoLabel').textContent = 'Nuevo Cargo';
-      formCargo.reset();
-      document.getElementById('cargoId').value = '';
-      modalCargo.show();
-    });
-
-    // ======= Editar cargo =======
-    function editarCargo(id) {
-      const cargo = cargos.find(c => c.id === id);
-      if (!cargo) return;
-
-      document.getElementById('modalCargoLabel').textContent = 'Editar Cargo';
-      document.getElementById('cargoId').value = cargo.id;
-      document.getElementById('nombreCargo').value = cargo.nombre;
-      document.getElementById('descripcionCargo').value = cargo.descripcion || '';
-      
-      modalCargo.show();
-    }
-
-    // ======= Guardar cargo (crear o actualizar) =======
-    btnGuardarCargo.addEventListener('click', () => {
-      const id = document.getElementById('cargoId').value;
-      const nombre = document.getElementById('nombreCargo').value.trim();
-      const descripcion = document.getElementById('descripcionCargo').value.trim();
-
-      // Validaciones
-      if (!nombre) {
-        alert('El nombre del cargo es obligatorio');
-        return;
-      }
-
-      if (nombre.length > 45) {
-        alert('El nombre no puede tener más de 45 caracteres');
-        return;
-      }
-
-      if (descripcion.length > 45) {
-        alert('La descripción no puede tener más de 45 caracteres');
-        return;
-      }
-
-      // Verificar si el nombre ya existe (excepto para el cargo que se está editando)
-      const nombreExistente = cargos.find(c => 
-        c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== parseInt(id || 0)
-      );
-      
-      if (nombreExistente) {
-        alert('Ya existe un cargo con ese nombre');
-        return;
-      }
-
-      if (id) {
-        // Actualizar cargo existente
-        const index = cargos.findIndex(c => c.id === parseInt(id));
-        if (index !== -1) {
-          cargos[index] = {
-            ...cargos[index],
-            nombre,
-            descripcion: descripcion || null
-          };
-        }
-      } else {
-        // Crear nuevo cargo
-        const nuevoId = Math.max(...cargos.map(c => c.id), 0) + 1;
-        cargos.push({
-          id: nuevoId,
-          nombre,
-          descripcion: descripcion || null
-        });
-      }
-
-      modalCargo.hide();
-      renderTablaCargos();
-      filtrarCargos(); // Para mantener los filtros aplicados
-      
-      // Aquí iría la llamada al backend:
-      // if (id) {
-      //   // PUT /api/cargos/{id}
-      //   fetch(`/api/cargos/${id}`, {
-      //     method: 'PUT',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ nombre, descripcion })
-      //   });
-      // } else {
-      //   // POST /api/cargos
-      //   fetch('/api/cargos', {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ nombre, descripcion })
-      //   });
-      // }
-    });
-
-    // ======= Eliminar cargo =======
-    function eliminarCargo(id) {
-      const cargo = cargos.find(c => c.id === id);
-      if (!cargo) return;
-
-      if (confirm(`¿Está seguro de que desea eliminar el cargo "${cargo.nombre}"?`)) {
-        cargos = cargos.filter(c => c.id !== id);
-        renderTablaCargos();
-        filtrarCargos();
-        
-        // Aquí iría la llamada al backend:
-        // fetch(`/api/cargos/${id}`, { method: 'DELETE' });
-      }
-    }
-
-    // ======= Event Listeners para búsqueda =======
-    inputBuscarCargo.addEventListener('input', filtrarCargos);
-    btnLimpiarBusqueda.addEventListener('click', () => {
-      inputBuscarCargo.value = '';
-      renderTablaCargos(cargos);
-    });
-
-    // ======= Validación en tiempo real de longitud =======
-    document.getElementById('nombreCargo').addEventListener('input', function() {
-      const maxLength = 45;
-      const currentLength = this.value.length;
-      if (currentLength > maxLength) {
-        this.value = this.value.substring(0, maxLength);
-      }
-    });
-
-    document.getElementById('descripcionCargo').addEventListener('input', function() {
-      const maxLength = 45;
-      const currentLength = this.value.length;
-      if (currentLength > maxLength) {
-        this.value = this.value.substring(0, maxLength);
-      }
+    // Demo: limpiar búsqueda
+    document.getElementById('btnLimpiar').addEventListener('click', () => {
+      const q = document.getElementById('q');
+      q.value = '';
+      q.focus();
     });
   </script>
 </body>

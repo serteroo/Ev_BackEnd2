@@ -32,31 +32,33 @@
           <div class="card-body">
             <h6 class="card-title text-muted mb-3">NAVEGACIÓN</h6>
             <ul class="nav nav-pills flex-column gap-2">
+              {% with n=request.resolver_match.url_name %}
               <li class="nav-item">
-                <a class="nav-link" href="dashboard_admin.html">
+                <a class="nav-link {% if n == 'dash_admin' %}active{% endif %}" href="{% url 'dash_admin' %}">
                   <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="crud_cargo.html">
+                <a class="nav-link {% if n == 'crud_cargo' %}active{% endif %}" href="{% url 'crud_cargo' %}">
                   <i class="bi bi-briefcase me-2"></i>Gestión de Cargos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="contratos_admin.html">
+                <a class="nav-link {% if n == 'contratos_admin' %}active{% endif %}" href="{% url 'contratos_admin' %}">
                   <i class="bi bi-file-earmark-text me-2"></i>Contratos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="liquidacion.html">
+                <a class="nav-link {% if n == 'liquidaciones_admin' %}active{% endif %}" href="{% url 'liquidaciones_admin' %}">
                   <i class="bi bi-cash-coin me-2"></i>Liquidaciones
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="horario_jornada.html">
+                <a class="nav-link {% if n == 'horarios_admin' %}active{% endif %}" href="{% url 'horarios_admin' %}">
                   <i class="bi bi-clock me-2"></i>Horarios
                 </a>
               </li>
+              {% endwith %}
             </ul>
           </div>
         </div>
@@ -67,7 +69,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h4 class="m-0">Gestión de Horarios</h4>
           <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary btn-sm" href="dashboard_admin.html">Volver al dashboard</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'dash_admin' %}">Volver al dashboard</a>
             <button class="btn btn-primary btn-sm" id="btnNuevoHorario">
               <i class="bi bi-plus-circle me-1"></i>Nuevo Horario
             </button>
@@ -172,96 +174,32 @@
   <script>
     // ======= Datos DEMO de horarios =======
     let horarios = [
-      { 
-        id: 1, 
-        dia: "Lunes", 
-        entrada: "08:00", 
-        salida: "17:00", 
-        descanso: "13:00 - 14:00", 
-        zona: "Hornos", 
-        observacion: "" 
-      },
-      { 
-        id: 2, 
-        dia: "Martes", 
-        entrada: "08:00", 
-        salida: "17:00", 
-        descanso: "13:00 - 14:00", 
-        zona: "Hornos", 
-        observacion: "Turno hornos" 
-      },
-      { 
-        id: 3, 
-        dia: "Miércoles", 
-        entrada: "08:00", 
-        salida: "17:00", 
-        descanso: "13:00 - 14:00", 
-        zona: "Control calidad", 
-        observacion: "" 
-      },
-      { 
-        id: 4, 
-        dia: "Jueves", 
-        entrada: "08:00", 
-        salida: "17:00", 
-        descanso: "13:00 - 14:00", 
-        zona: "Producción", 
-        observacion: "" 
-      },
-      { 
-        id: 5, 
-        dia: "Viernes", 
-        entrada: "08:00", 
-        salida: "16:00", 
-        descanso: "13:00 - 13:45", 
-        zona: "Producción", 
-        observacion: "Capacitación 10:00" 
-      },
-      { 
-        id: 6, 
-        dia: "Sábado", 
-        entrada: "09:00", 
-        salida: "13:00", 
-        descanso: "-", 
-        zona: "Apoyo tienda", 
-        observacion: "" 
-      },
-      { 
-        id: 7, 
-        dia: "Domingo", 
-        entrada: "-", 
-        salida: "-", 
-        descanso: "-", 
-        zona: "-", 
-        observacion: "Descanso" 
-      }
+      { id:1, dia:"Lunes", entrada:"08:00", salida:"17:00", descanso:"13:00 - 14:00", zona:"Hornos", observacion:"" },
+      { id:2, dia:"Martes", entrada:"08:00", salida:"17:00", descanso:"13:00 - 14:00", zona:"Hornos", observacion:"Turno hornos" },
+      { id:3, dia:"Miércoles", entrada:"08:00", salida:"17:00", descanso:"13:00 - 14:00", zona:"Control calidad", observacion:"" },
+      { id:4, dia:"Jueves", entrada:"08:00", salida:"17:00", descanso:"13:00 - 14:00", zona:"Producción", observacion:"" },
+      { id:5, dia:"Viernes", entrada:"08:00", salida:"16:00", descanso:"13:00 - 13:45", zona:"Producción", observacion:"Capacitación 10:00" },
+      { id:6, dia:"Sábado", entrada:"09:00", salida:"13:00", descanso:"-", zona:"Apoyo tienda", observacion:"" },
+      { id:7, dia:"Domingo", entrada:"-", salida:"-", descanso:"-", zona:"-", observacion:"Descanso" }
     ];
 
-    // ======= Elementos del DOM =======
     const tablaHorarios = document.getElementById('tablaHorarios').querySelector('tbody');
     const btnNuevoHorario = document.getElementById('btnNuevoHorario');
     const modalHorario = new bootstrap.Modal(document.getElementById('modalHorario'));
     const formHorario = document.getElementById('formHorario');
     const btnGuardarHorario = document.getElementById('btnGuardarHorario');
 
-    // ======= Inicialización =======
     document.addEventListener('DOMContentLoaded', function() {
       renderTablaHorarios();
     });
 
-    // ======= Renderizar tabla de horarios =======
     function renderTablaHorarios() {
       tablaHorarios.innerHTML = '';
-      
-      // Ordenar horarios por día de la semana
-      const ordenDias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-      const horariosOrdenados = [...horarios].sort((a, b) => {
-        return ordenDias.indexOf(a.dia) - ordenDias.indexOf(b.dia);
-      });
+      const ordenDias = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+      const horariosOrdenados = [...horarios].sort((a,b) => ordenDias.indexOf(a.dia) - ordenDias.indexOf(b.dia));
       
       horariosOrdenados.forEach((horario) => {
         const tr = document.createElement('tr');
-        
         tr.innerHTML = `
           <td class="fw-semibold">${horario.dia}</td>
           <td>${horario.entrada}</td>
@@ -281,17 +219,14 @@
         tablaHorarios.appendChild(tr);
       });
 
-      // Agregar eventos a los botones
       document.querySelectorAll('.btn-editar-horario').forEach(btn => {
         btn.addEventListener('click', () => editarHorario(parseInt(btn.dataset.id)));
       });
-
       document.querySelectorAll('.btn-eliminar-horario').forEach(btn => {
         btn.addEventListener('click', () => eliminarHorario(parseInt(btn.dataset.id)));
       });
     }
 
-    // ======= Nuevo horario =======
     btnNuevoHorario.addEventListener('click', () => {
       document.getElementById('modalHorarioLabel').textContent = 'Nuevo Horario';
       formHorario.reset();
@@ -299,7 +234,6 @@
       modalHorario.show();
     });
 
-    // ======= Editar horario =======
     function editarHorario(id) {
       const horario = horarios.find(h => h.id === id);
       if (!horario) return;
@@ -312,11 +246,9 @@
       document.getElementById('descansoHorario').value = horario.descanso;
       document.getElementById('zonaHorario').value = horario.zona;
       document.getElementById('observacionHorario').value = horario.observacion || '';
-      
       modalHorario.show();
     }
 
-    // ======= Guardar horario (crear o actualizar) =======
     btnGuardarHorario.addEventListener('click', () => {
       const id = document.getElementById('horarioId').value;
       const dia = document.getElementById('diaHorario').value;
@@ -326,86 +258,34 @@
       const zona = document.getElementById('zonaHorario').value || '-';
       const observacion = document.getElementById('observacionHorario').value.trim();
 
-      // Validaciones
-      if (!dia) {
-        alert('El día es obligatorio');
-        return;
-      }
+      if (!dia) { alert('El día es obligatorio'); return; }
 
-      // Verificar si ya existe un horario para ese día (excepto para el horario que se está editando)
-      const diaExistente = horarios.find(h => 
-        h.dia === dia && h.id !== parseInt(id || 0)
-      );
-      
-      if (diaExistente) {
-        alert('Ya existe un horario para ese día');
-        return;
-      }
+      const diaExistente = horarios.find(h => h.dia === dia && h.id !== parseInt(id || 0));
+      if (diaExistente) { alert('Ya existe un horario para ese día'); return; }
 
       if (id) {
-        // Actualizar horario existente
         const index = horarios.findIndex(h => h.id === parseInt(id));
         if (index !== -1) {
-          horarios[index] = {
-            ...horarios[index],
-            dia,
-            entrada,
-            salida,
-            descanso,
-            zona,
-            observacion
-          };
+          horarios[index] = { ...horarios[index], dia, entrada, salida, descanso, zona, observacion };
         }
       } else {
-        // Crear nuevo horario
         const nuevoId = Math.max(...horarios.map(h => h.id), 0) + 1;
-        horarios.push({
-          id: nuevoId,
-          dia,
-          entrada,
-          salida,
-          descanso,
-          zona,
-          observacion
-        });
+        horarios.push({ id:nuevoId, dia, entrada, salida, descanso, zona, observacion });
       }
 
       modalHorario.hide();
       renderTablaHorarios();
-      
-      // Aquí iría la llamada al backend:
-      // if (id) {
-      //   // PUT /api/horarios/{id}
-      //   fetch(`/api/horarios/${id}`, {
-      //     method: 'PUT',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ dia, entrada, salida, descanso, zona, observacion })
-      //   });
-      // } else {
-      //   // POST /api/horarios
-      //   fetch('/api/horarios', {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ dia, entrada, salida, descanso, zona, observacion })
-      //   });
-      // }
     });
 
-    // ======= Eliminar horario =======
     function eliminarHorario(id) {
       const horario = horarios.find(h => h.id === id);
       if (!horario) return;
-
       if (confirm(`¿Está seguro de que desea eliminar el horario del ${horario.dia}?`)) {
         horarios = horarios.filter(h => h.id !== id);
         renderTablaHorarios();
-        
-        // Aquí iría la llamada al backend:
-        // fetch(`/api/horarios/${id}`, { method: 'DELETE' });
       }
     }
 
-    // ======= Exportar CSV (funcionalidad original) =======
     document.getElementById("btnExportar").addEventListener("click", () => {
       const rows = Array.from(document.querySelectorAll("#tablaHorarios tr"));
       const csv = rows.map(r => Array.from(r.children).map(c => `"${c.textContent.replace(/\"/g,'\"\"')}"`).join(",")).join("\n");

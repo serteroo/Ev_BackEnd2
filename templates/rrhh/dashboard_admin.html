@@ -38,31 +38,33 @@
           <div class="card-body">
             <h6 class="card-title text-muted mb-3">NAVEGACIÓN</h6>
             <ul class="nav nav-pills flex-column gap-2">
+              {% with n=request.resolver_match.url_name %}
               <li class="nav-item">
-                <a class="nav-link active" href="dashboard_admin.html">
+                <a class="nav-link {% if n == 'dash_admin' %}active{% endif %}" href="{% url 'dash_admin' %}">
                   <i class="bi bi-speedometer2 me-2"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="crud_cargo.html">
+                <a class="nav-link {% if n == 'crud_cargo' %}active{% endif %}" href="{% url 'crud_cargo' %}">
                   <i class="bi bi-briefcase me-2"></i>Gestión de Cargos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="contratos_admin.html">
+                <a class="nav-link {% if n == 'contratos_admin' %}active{% endif %}" href="{% url 'contratos_admin' %}">
                   <i class="bi bi-file-earmark-text me-2"></i>Contratos
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="liquidacion.html">
+                <a class="nav-link {% if n == 'liquidaciones_admin' %}active{% endif %}" href="{% url 'liquidaciones_admin' %}">
                   <i class="bi bi-cash-coin me-2"></i>Liquidaciones
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="horario_jornada.html">
+                <a class="nav-link {% if n == 'horarios_admin' %}active{% endif %}" href="{% url 'horarios_admin' %}">
                   <i class="bi bi-clock me-2"></i>Horarios
                 </a>
               </li>
+              {% endwith %}
             </ul>
           </div>
         </div>
@@ -143,7 +145,7 @@
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <h5 class="card-title m-0">Mis liquidaciones</h5>
-                  <a href="liquidacion.html" class="btn btn-outline-primary btn-sm">Ver todas</a>
+                  <a href="{% url 'liquidaciones_admin' %}" class="btn btn-outline-primary btn-sm">Ver todas</a>
                 </div>
                 <div class="mt-3">
                   <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
@@ -161,7 +163,7 @@
                     </div>
                   </div>
                 </div>
-                <a href="horario_jornada.html" class="btn btn-outline-dark w-100 mt-3">Ver mis horarios</a>
+                <a href="{% url 'horarios_admin' %}" class="btn btn-outline-dark w-100 mt-3">Ver mis horarios</a>
               </div>
             </div>
           </div>
@@ -192,8 +194,8 @@
             <div class="label-muted">Cargo</div>
             <div id="vCargo" class="fw-semibold">—</div>
           </div>
-          <!-- BOTÓN MODIFICADO: Ahora redirige a crud_cargo.html -->
-          <a href="crud_cargo.html" class="btn btn-sm btn-outline-primary" id="btnEditCargo">Gestionar Cargos</a>
+          <!-- BOTÓN: redirige al CRUD de cargos -->
+          <a href="{% url 'crud_cargo' %}" class="btn btn-sm btn-outline-primary" id="btnEditCargo">Gestionar Cargos</a>
         </div>
         <div class="mt-2 d-none" id="grpCargo">
           <div class="input-group">
@@ -241,13 +243,12 @@
         </div>
       </div>
 
-    
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // ======= Datos DEMO de empleados (puedes reemplazar por fetch a tu backend) =======
+    // ======= Datos DEMO de empleados =======
     const empleados = [
       { id:1, nombre:"María González", cargo:"Supervisora", zona:"Producción", horario:"08:00-17:00 (L-V)" },
       { id:2, nombre:"Juan Pérez", cargo:"Operario", zona:"Hornos", horario:"08:00-17:00 (L-V)" },
@@ -258,7 +259,6 @@
       { id:7, nombre:"Fernanda Ruiz", cargo:"Líder de Turno", zona:"Hornos", horario:"06:00-14:00 (L-S)" }
     ];
 
-    // ======= Render tabla =========
     const tbody = document.querySelector("#tablaEmpleados tbody");
     const buscar = document.getElementById("inputBuscar");
     const btnLimpiar = document.getElementById("btnLimpiar");
@@ -279,7 +279,6 @@
         `;
         tbody.appendChild(tr);
       });
-      // bind botones "Ver"
       tbody.querySelectorAll(".btn-ver").forEach(btn => {
         btn.addEventListener("click", () => abrirOffcanvas(parseInt(btn.dataset.id,10)));
       });
@@ -299,10 +298,9 @@
     buscar.addEventListener("input", () => renderTablaEmpleados(filtrarEmpleados(buscar.value)));
     btnLimpiar.addEventListener("click", () => { buscar.value = ""; renderTablaEmpleados(empleados); });
 
-    // Inicial
     renderTablaEmpleados(empleados);
 
-    // ======= Offcanvas y edición por categoría =======
+    // Offcanvas
     const offEl = document.getElementById("offEmpleado");
     const offCanvas = new bootstrap.Offcanvas(offEl);
 
@@ -312,7 +310,6 @@
     const vZona = document.getElementById("vZona");
     const vHorario = document.getElementById("vHorario");
 
-    // grupos de edición
     const grpCargo = document.getElementById("grpCargo");
     const grpZona = document.getElementById("grpZona");
     const grpHorario = document.getElementById("grpHorario");
@@ -332,25 +329,16 @@
       vCargo.textContent = emp.cargo;
       vZona.textContent = emp.zona;
       vHorario.textContent = emp.horario;
-
-      // esconder grupos de edición si quedaron abiertos
       [grpCargo, grpZona, grpHorario].forEach(g => g.classList.add("d-none"));
-
       offCanvas.show();
     }
 
-    // helpers toggle
     function toggleGrupo(grpEl, inputEl, valActual) {
       inputEl.value = valActual || "";
       grpEl.classList.remove("d-none");
       inputEl.focus();
     }
-    function cancelarGrupo(grpEl) {
-      grpEl.classList.add("d-none");
-    }
-
-    // CARGO - MODIFICADO: Ahora es un enlace que redirige a crud_cargo.html
-    // El botón ya no tiene eventos JavaScript, es un simple enlace HTML
+    function cancelarGrupo(grpEl) { grpEl.classList.add("d-none"); }
 
     // ZONA
     document.getElementById("btnEditZona").addEventListener("click", () => {
@@ -366,7 +354,6 @@
       vZona.textContent = nuevo;
       cancelarGrupo(grpZona);
       renderTablaEmpleados(filtrarEmpleados(buscar.value));
-      // PUT backend aquí
     });
 
     // HORARIO
@@ -383,7 +370,6 @@
       vHorario.textContent = nuevo;
       cancelarGrupo(grpHorario);
       renderTablaEmpleados(filtrarEmpleados(buscar.value));
-      // PUT backend aquí
     });
   </script>
 </body>

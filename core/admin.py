@@ -133,20 +133,72 @@ class CuentaBancariaAdmin(ScopedAdmin, BaseAdmin):
     list_filter = ("banco", "tipo_cuenta", "status")
     list_ordering = ("empleado__run", "banco")
 
+@admin.action(description="Marcar como Vigente")
+def marcar_vigente(modeladmin, request, queryset):
+    queryset.update(estado="Vigente")
+
+@admin.action(description="Marcar como En firma")
+def marcar_en_firma(modeladmin, request, queryset):
+    queryset.update(estado="En firma")
+
+@admin.action(description="Marcar como Finalizado")
+def marcar_finalizado(modeladmin, request, queryset):
+    queryset.update(estado="Finalizado")
+
+
 @admin.register(contrato)
 class ContratoAdmin(ScopedAdmin, BaseAdmin):
     list_display = (
-        "id", "empleado", "departamento", "cargo",
-        "fecha_inicio", "fecha_fin", "turno_has_jornada"
+        "id",
+        "empleado",
+        "departamento",
+        "cargo",
+        "tipo",
+        "estado",
+        "fecha_inicio",
+        "fecha_fin",
+        "tiene_pdf",
     ) + BASE_LIST
+
     list_select_related = ("empleado", "departamento", "cargo", "turno_has_jornada")
+
     search_fields = (
-        "empleado__run", "empleado__user__username",
-        "departamento__nombre", "cargo__nombre",
+        "empleado__run",
+        "empleado__user__username",
+        "empleado__user__first_name",
+        "empleado__user__last_name",
+        "departamento__nombre",
+        "cargo__nombre",
+        "detalle_contrato",
     )
+
     autocomplete_fields = ("empleado", "departamento", "cargo", "turno_has_jornada")
-    list_filter = ("departamento", "cargo", "status")
-    list_ordering = ("empleado__run", "fecha_inicio")
+
+    list_filter = ("departamento", "cargo", "tipo", "estado")
+    ordering = ("-fecha_inicio", "empleado__run")
+    date_hierarchy = "fecha_inicio"
+    actions = [marcar_vigente, marcar_en_firma, marcar_finalizado]
+
+    fieldsets = (
+        ("Información principal", {
+            "fields": (
+                "empleado",
+                ("departamento", "cargo"),
+                "turno_has_jornada",
+                "detalle_contrato",
+            )
+        }),
+        ("Vigencia", {
+            "fields": (("fecha_inicio", "fecha_fin"), ("tipo", "estado")),
+        }),
+        ("Documento", {
+            "fields": ("pdf",),
+        }),
+    )
+
+    @admin.display(boolean=True, description="PDF")
+    def tiene_pdf(self, obj):
+        return bool(getattr(obj, "pdf", None))
 
 @admin.register(liquidacion)
 class LiquidacionAdmin(ScopedAdmin, BaseAdmin):
@@ -175,6 +227,8 @@ class PagoAdmin(ScopedAdmin, BaseAdmin):
 class ZonaTrabajoAdmin(ScopedAdmin, BaseAdmin):
     list_display = ("nombre", "area", "ubicacion", "supervisor")
     search_fields = ("nombre", "area", "ubicacion", "supervisor")
+
+
 
 
 
