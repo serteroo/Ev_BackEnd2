@@ -1,5 +1,7 @@
 python -m venv env
 source env/Scripts/activate
+pip install python-dotenv
+pip install mysql
 
 pip install django
 pip install djangorestframework
@@ -7,5 +9,4 @@ pip install djangorestframework
 python manage.py makemigrations
 python manage.py migrate
 python manage.py seed_all
-python manage.py createsuperuser
 python manage.py runserver

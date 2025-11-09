@@ -1,29 +1,9 @@
-# Python/Django
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.log
-
-# SQLite (por si aparece)
-db.sqlite3
-*.sqlite3
-
-# Entornos / secretos
-.env
-.env.*
 venv/
-.venv/
-env/
-
-# Artefactos Django
-media/
-staticfiles/
-
-# Editor / OS
+.env
+*.sqlite3
+db.sqlite3
 .vscode/
-.DS_Store
-
-*.env.local
-*.log
-

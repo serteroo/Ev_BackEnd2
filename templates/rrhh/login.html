@@ -1,40 +1,65 @@
+<!-- templates/rrhh/login.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login Fornería</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body class="bg-light">
-
   <div class="container d-flex justify-content-center align-items-center vh-100">
     <div class="card shadow p-4" style="width: 22rem;">
       <h4 class="text-center mb-4 text-danger">Fornería</h4>
 
-      <form>
+      <form id="frmLogin" novalidate>
         <div class="mb-3">
-          <label for="usuario" class="form-label">Usuario</label>
-          <input type="text" class="form-control" id="usuario" placeholder="Ingresa tu usuario">
+          <label class="form-label">Usuario (email)</label>
+          <input type="email" class="form-control" id="usuario" placeholder="usuario@empresa.com" required />
         </div>
-
         <div class="mb-3">
-          <label for="password" class="form-label">Contraseña</label>
-          <input type="password" class="form-control" id="password" placeholder="Ingresa tu contraseña">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-control" id="password" required />
         </div>
-
         <div class="d-grid">
-          <a class="btn btn-primary" href="dashboard.html">Iniciar Sesión</a>
+          <button class="btn btn-primary" id="btnLogin" type="submit">Iniciar Sesión</button>
         </div>
+        <div id="msg" class="text-danger small mt-2"></div>
       </form>
-
-      <div class="text-center mt-3">
-        <a href="#" class="text-decoration-none text-muted">¿Olvidaste tu contraseña?</a><br>
-        <button class="btn btn-link p-0 mt-1">Recuperar contraseña</button>
-      </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById('frmLogin').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('usuario').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('btnLogin');
+  const msg = document.getElementById('msg');
+
+  btn.disabled = true; btn.textContent = 'Ingresando...'; msg.textContent = '';
+
+  try {
+    const res = await fetch('/api/login/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json().catch(()=>({ok:false}));
+    if (!res.ok || !data.ok) {
+      msg.textContent = data.msg || 'Credenciales inválidas';
+      return;
+    }
+    // redirección por rol
+    window.location.href = (data.user.rol === 'admin') ? '/dashboard-admin/' : '/dashboard/';
+  } catch (e) {
+    msg.textContent = 'Error de conexión';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Iniciar Sesión';
+  }
+});
+</script>
+
 </body>
 </html>
