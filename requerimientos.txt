@@ -1,4 +1,4 @@
-python -m venv env
+python -m venv venv
 source env/Scripts/activate
 pip install python-dotenv
 pip install mysql
