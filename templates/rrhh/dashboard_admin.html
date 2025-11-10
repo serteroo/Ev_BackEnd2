@@ -19,24 +19,33 @@
 </head>
 <body class="bg-light">
 
+  <!-- NAVBAR -->
   <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
     <div class="container-fluid">
-      <a  class="navbar-brand" href="#">
+      <a class="navbar-brand" href="#">
         <span class="h4 m-0 brand">Fornería</span>
       </a>
 
       <div class="ms-auto d-flex align-items-center gap-2">
-        <img src="https://via.placeholder.com/90" alt="mifoto" class="avatar" id="navAvatar">
-        <span class="fw-semibold" id="navUserName">Renato Muñoz (Admin)</span>
-        <!-- CERRAR SESIÓN -->
-        <a href="#" id="btnLogoutEmp" class="btn btn-outline-danger btn-sm px-3">Cerrar sesión</a>
+        {% if admin_emp and admin_emp.user.first_name %}
+          <img src="https://ui-avatars.com/api/?name={{ admin_emp.user.first_name }}+{{ admin_emp.user.last_name }}&background=dc3545&color=fff&bold=true"
+               alt="foto perfil" class="avatar" id="navAvatar">
+        {% else %}
+          <img src="https://via.placeholder.com/90" alt="avatar" class="avatar" id="navAvatar">
+        {% endif %}
+
+        <span class="fw-semibold" id="navUserName">
+          {{ request.user.get_full_name|default:request.user.username }} (Admin)
+        </span>
+
+        <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm px-3">Cerrar sesión</a>
       </div>
     </div>
   </nav>
 
   <div class="container-fluid py-4">
     <div class="row">
-      <!-- Sidebar -->
+      <!-- SIDEBAR -->
       <div class="col-lg-2 col-md-3 d-none d-md-block">
         <div class="card shadow-sm">
           <div class="card-body">
@@ -74,21 +83,22 @@
         </div>
       </div>
 
-      <!-- Contenido principal -->
+      <!-- CONTENIDO PRINCIPAL -->
       <div class="col-lg-10 col-md-9">
         <div class="row g-4">
+
           <!-- COLUMNA IZQUIERDA -->
           <div class="col-12 col-lg-8">
-              
+
             <!-- EMPLEADOS -->
             <div class="card shadow-sm">
               <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                   <h5 class="m-0">Empleados</h5>
-                  <div class="d-flex gap-2">
-                    <input id="inputBuscar" class="form-control form-control-sm" placeholder="Buscar por nombre, cargo o zona" />
-                    <button class="btn btn-outline-secondary btn-sm" id="btnLimpiar">Limpiar</button>
-                  </div>
+                  <form class="d-flex gap-2" method="get">
+                    <input name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Buscar por nombre, RUN o zona" />
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'dash_admin' %}">Limpiar</a>
+                  </form>
                 </div>
 
                 <div class="table-responsive">
@@ -103,7 +113,30 @@
                         <th>Acciones</th>
                       </tr>
                     </thead>
-                    <tbody><!-- filas dinámicas --></tbody>
+                    <tbody>
+                      {% for e in empleados %}
+                        <tr>
+                          <td>{{ forloop.counter }}</td>
+                          <td>{{ e.nombre }}</td>
+                          <td>{{ e.cargo }}</td>
+                          <td>{{ e.zona }}</td>
+                          <td>{{ e.horario }}</td>
+                          <td class="text-nowrap">
+                            <button
+                              class="btn btn-sm btn-outline-primary btn-ver"
+                              data-bs-toggle="offcanvas" data-bs-target="#offEmpleado"
+                              data-id="{{ e.id }}"
+                              data-nombre="{{ e.nombre }}"
+                              data-cargo="{{ e.cargo }}"
+                              data-zona="{{ e.zona }}"
+                              data-horario="{{ e.horario }}"
+                            >Ver</button>
+                          </td>
+                        </tr>
+                      {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted">No hay empleados.</td></tr>
+                      {% endfor %}
+                    </tbody>
                   </table>
                 </div>
               </div>
@@ -113,33 +146,47 @@
             <div class="card shadow-sm mt-4">
               <div class="card-body">
                 <h5 class="card-title">Mi zona de trabajo</h5>
-                <p class="mb-2"><strong>Área:</strong> Administración — RRHH</p>
-                <p class="mb-2"><strong>Ubicación:</strong> Oficina Central, Piso 2</p>
-                <p class="mb-2"><strong>Supervisor(a):</strong> Dirección General</p>
-                <p class="mb-0"><strong>Notas:</strong> Reunión semanal con jefaturas de área (miércoles 12:00).</p>
+                {% if admin_emp and admin_emp.zona_trabajo %}
+                  <p class="mb-2"><strong>Área:</strong> {{ admin_emp.zona_trabajo.nombre }} — {{ admin_emp.zona_trabajo.area }}</p>
+                  <p class="mb-2"><strong>Ubicación:</strong> {{ admin_emp.zona_trabajo.ubicacion }}</p>
+                  <p class="mb-2"><strong>Supervisor(a):</strong> {{ admin_emp.zona_trabajo.supervisor }}</p>
+                  <p class="mb-0"><strong>Notas:</strong> {{ admin_emp.zona_trabajo.notas|default:"—" }}</p>
+                {% else %}
+                  <p class="mb-2"><strong>Área:</strong> —</p>
+                  <p class="mb-2"><strong>Ubicación:</strong> —</p>
+                  <p class="mb-2"><strong>Supervisor(a):</strong> —</p>
+                  <p class="mb-0"><strong>Notas:</strong> —</p>
+                {% endif %}
               </div>
             </div>
-          </div>
+
+          </div><!-- /col izquierda -->
 
           <!-- COLUMNA DERECHA -->
           <div class="col-12 col-lg-4">
+
             <!-- PERFIL ADMIN -->
             <div class="card shadow-sm">
               <div class="card-body">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                  <img src="https://via.placeholder.com/160" alt="mifoto" class="avatar-lg">
+                  {% if admin_emp and admin_emp.user.first_name %}
+                    <img src="https://ui-avatars.com/api/?name={{ admin_emp.user.first_name }}+{{ admin_emp.user.last_name }}&background=dc3545&color=fff&bold=true"
+                         alt="mifoto" class="avatar-lg">
+                  {% else %}
+                    <img src="https://via.placeholder.com/160" alt="mifoto" class="avatar-lg">
+                  {% endif %}
                   <div>
-                    <h5 class="mb-1" id="profileName">Renato Muñoz</h5>
+                    <h5 class="mb-1" id="profileName">{{ request.user.get_full_name|default:request.user.username }}</h5>
                     <span class="badge text-bg-danger">Admin</span>
                   </div>
                 </div>
                 <div class="mb-2">
                   <small class="text-muted d-block">Correo</small>
-                  <span id="profileEmail">renato.munoz@forneria.cl</span>
+                  <span id="profileEmail">{{ request.user.email }}</span>
                 </div>
                 <div class="mb-2">
                   <small class="text-muted d-block">Teléfono</small>
-                  <span id="profilePhone">+56 9 1234 5678</span>
+                  <span id="profilePhone">{{ admin_emp.fono|default:"—" }}</span>
                 </div>
               </div>
             </div>
@@ -151,30 +198,31 @@
                   <h5 class="card-title m-0">Mis liquidaciones</h5>
                   <a href="{% url 'liquidaciones_admin' %}" class="btn btn-outline-primary btn-sm">Ver todas</a>
                 </div>
+
                 <div class="mt-3">
-                  <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
-                    <span>Octubre 2025</span>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-sm btn-primary">Ver</button>
-                      <button class="btn btn-sm btn-outline-secondary">PDF</button>
+                  {% for l in admin_liqs %}
+                    <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
+                      <span>{{ l.periodo|date:"F Y" }}</span>
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary" disabled>Ver</button>
+                        <button class="btn btn-sm btn-outline-secondary" disabled>PDF</button>
+                      </div>
                     </div>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                    <span>Septiembre 2025</span>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-sm btn-primary">Ver</button>
-                      <button class="btn btn-sm btn-outline-secondary">PDF</button>
-                    </div>
-                  </div>
+                  {% empty %}
+                    <div class="text-muted">Sin liquidaciones.</div>
+                  {% endfor %}
                 </div>
+
                 <a href="{% url 'horarios_admin' %}" class="btn btn-outline-dark w-100 mt-3">Ver mis horarios</a>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+
+          </div><!-- /col derecha -->
+
+        </div><!-- /row g-4 -->
+      </div><!-- /col principal -->
+    </div><!-- /row -->
+  </div><!-- /container-fluid -->
 
   <!-- OFFCANVAS VER/EDITAR EMPLEADO -->
   <div class="offcanvas offcanvas-end" tabindex="-1" id="offEmpleado" aria-labelledby="offEmpleadoLabel">
@@ -198,7 +246,6 @@
             <div class="label-muted">Cargo</div>
             <div id="vCargo" class="fw-semibold">—</div>
           </div>
-          <!-- BOTÓN: redirige al CRUD de cargos -->
           <a href="{% url 'crud_cargo' %}" class="btn btn-sm btn-outline-primary" id="btnEditCargo">Gestionar Cargos</a>
         </div>
         <div class="mt-2 d-none" id="grpCargo">
@@ -235,7 +282,7 @@
             <div class="label-muted">Horario</div>
             <div id="vHorario" class="fw-semibold">—</div>
           </div>
-          <button class="btn btn-sm btn-outline-primary" id="btnEditHorario">Editar</button>
+        <button class="btn btn-sm btn-outline-primary" id="btnEditHorario">Editar</button>
         </div>
         <div class="mt-2 d-none" id="grpHorario">
           <div class="input-group">
@@ -246,64 +293,11 @@
           <div class="form-text">Formato sugerido: "HH:MM-HH:MM (días)".</div>
         </div>
       </div>
-
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // ======= Datos DEMO de empleados =======
-    const empleados = [
-      { id:1, nombre:"María González", cargo:"Supervisora", zona:"Producción", horario:"08:00-17:00 (L-V)" },
-      { id:2, nombre:"Juan Pérez", cargo:"Operario", zona:"Hornos", horario:"08:00-17:00 (L-V)" },
-      { id:3, nombre:"Ana López", cargo:"Control Calidad", zona:"Calidad", horario:"09:00-18:00 (L-V)" },
-      { id:4, nombre:"Carlos Díaz", cargo:"Operario", zona:"Embalaje", horario:"07:00-15:00 (L-S)" },
-      { id:5, nombre:"Sofía Rivas", cargo:"Atención Tienda", zona:"Tienda", horario:"10:00-19:00 (L-D)" },
-      { id:6, nombre:"Pedro Castro", cargo:"Operario", zona:"Producción", horario:"08:00-17:00 (L-V)" },
-      { id:7, nombre:"Fernanda Ruiz", cargo:"Líder de Turno", zona:"Hornos", horario:"06:00-14:00 (L-S)" }
-    ];
-
-    const tbody = document.querySelector("#tablaEmpleados tbody");
-    const buscar = document.getElementById("inputBuscar");
-    const btnLimpiar = document.getElementById("btnLimpiar");
-
-    function renderTablaEmpleados(list) {
-      tbody.innerHTML = "";
-      list.forEach((e, i) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${e.nombre}</td>
-          <td>${e.cargo}</td>
-          <td>${e.zona}</td>
-          <td>${e.horario}</td>
-          <td class="text-nowrap">
-            <button class="btn btn-sm btn-outline-primary btn-ver" data-id="${e.id}">Ver</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-      tbody.querySelectorAll(".btn-ver").forEach(btn => {
-        btn.addEventListener("click", () => abrirOffcanvas(parseInt(btn.dataset.id,10)));
-      });
-    }
-
-    function filtrarEmpleados(q) {
-      const term = q.trim().toLowerCase();
-      if (!term) return empleados;
-      return empleados.filter(e =>
-        e.nombre.toLowerCase().includes(term) ||
-        e.cargo.toLowerCase().includes(term) ||
-        e.zona.toLowerCase().includes(term) ||
-        e.horario.toLowerCase().includes(term)
-      );
-    }
-
-    buscar.addEventListener("input", () => renderTablaEmpleados(filtrarEmpleados(buscar.value)));
-    btnLimpiar.addEventListener("click", () => { buscar.value = ""; renderTablaEmpleados(empleados); });
-
-    renderTablaEmpleados(empleados);
-
     // Offcanvas
     const offEl = document.getElementById("offEmpleado");
     const offCanvas = new bootstrap.Offcanvas(offEl);
@@ -324,18 +318,21 @@
 
     let currentId = null;
 
-    function abrirOffcanvas(id) {
-      currentId = id;
-      const emp = empleados.find(e => e.id === id);
-      if (!emp) return;
-      vNombre.textContent = emp.nombre;
-      vId.textContent = `ID: ${emp.id}`;
-      vCargo.textContent = emp.cargo;
-      vZona.textContent = emp.zona;
-      vHorario.textContent = emp.horario;
-      [grpCargo, grpZona, grpHorario].forEach(g => g.classList.add("d-none"));
+    // Abrir offcanvas desde botón "Ver"
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.btn-ver');
+      if (!btn) return;
+
+      currentId = parseInt(btn.dataset.id, 10);
+      vId.textContent = `ID: ${currentId}`;
+      vNombre.textContent = btn.dataset.nombre || '—';
+      vCargo.textContent = btn.dataset.cargo || '—';
+      vZona.textContent = btn.dataset.zona || '—';
+      vHorario.textContent = btn.dataset.horario || '—';
+
+      [grpCargo, grpZona, grpHorario].forEach(g => g.classList.add('d-none'));
       offCanvas.show();
-    }
+    });
 
     function toggleGrupo(grpEl, inputEl, valActual) {
       inputEl.value = valActual || "";
@@ -344,36 +341,28 @@
     }
     function cancelarGrupo(grpEl) { grpEl.classList.add("d-none"); }
 
-    // ZONA
+    // Editar zona (visual)
     document.getElementById("btnEditZona").addEventListener("click", () => {
       toggleGrupo(grpZona, inZona, vZona.textContent);
     });
     document.getElementById("btnCancelZona").addEventListener("click", () => cancelarGrupo(grpZona));
     document.getElementById("btnSaveZona").addEventListener("click", () => {
-      const emp = empleados.find(e => e.id === currentId);
-      if (!emp) return;
       const nuevo = inZona.value.trim();
       if (!nuevo) return;
-      emp.zona = nuevo;
       vZona.textContent = nuevo;
       cancelarGrupo(grpZona);
-      renderTablaEmpleados(filtrarEmpleados(buscar.value));
     });
 
-    // HORARIO
+    // Editar horario (visual)
     document.getElementById("btnEditHorario").addEventListener("click", () => {
       toggleGrupo(grpHorario, inHorario, vHorario.textContent);
     });
     document.getElementById("btnCancelHorario").addEventListener("click", () => cancelarGrupo(grpHorario));
     document.getElementById("btnSaveHorario").addEventListener("click", () => {
-      const emp = empleados.find(e => e.id === currentId);
-      if (!emp) return;
       const nuevo = inHorario.value.trim();
       if (!nuevo) return;
-      emp.horario = nuevo;
       vHorario.textContent = nuevo;
       cancelarGrupo(grpHorario);
-      renderTablaEmpleados(filtrarEmpleados(buscar.value));
     });
   </script>
 </body>

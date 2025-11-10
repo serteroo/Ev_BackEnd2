@@ -22,7 +22,8 @@ class Command(BaseCommand):
             'seed_cuenta_bancarias', # ← este está bien (plural correcto)
             'seed_contrato',         # ← singular
             'seed_liquidacion',      # ← singular
-            'seed_pago',             # ← singular
+            'seed_pago',              # ← singular
+            'seed_zonas_trabajo',     # ← singular
         ]
 
         for command in commands:

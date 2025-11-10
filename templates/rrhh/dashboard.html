@@ -29,7 +29,9 @@
 
       <div class="ms-auto d-flex align-items-center gap-2">
         <img src="https://via.placeholder.com/90" alt="mifoto" class="avatar" id="navAvatar">
-        <span class="fw-semibold" id="navUserName">Renato Muñoz</span>
+        <span class="fw-semibold" id="navUserName">
+          {{ emp.user.get_full_name|default:emp.user.username }}
+        </span>
         <!-- CERRAR SESIÓN -->
         <a href="#" id="btnLogoutEmp" class="btn btn-outline-danger btn-sm px-3">Cerrar sesión</a>
       </div>
@@ -58,26 +60,21 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Octubre</td>
-                    <td>2025</td>
-                    <td>$950.000</td>
-                    <td><span class="badge text-bg-success">Disponible</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-primary">Ver</button>
-                      <button class="btn btn-sm btn-outline-secondary">PDF</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Septiembre</td>
-                    <td>2025</td>
-                    <td>$940.000</td>
-                    <td><span class="badge text-bg-secondary">Archivado</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-primary">Ver</button>
-                      <button class="btn btn-sm btn-outline-secondary">PDF</button>
-                    </td>
-                  </tr>
+                  {% for l in liquidaciones %}
+                    <tr>
+                      <td>{{ l.periodo|date:"F" }}</td>
+                      <td>{{ l.periodo|date:"Y" }}</td>
+                      <td>${{ l.liquido|floatformat:0 }}</td>
+                      <td><span class="badge text-bg-secondary">{{ l.estado }}</span></td>
+                      <td>
+                      <button class="btn btn-sm btn-primary" disabled>Ver</button>
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center text-muted">Sin liquidaciones.</td>
+                    </tr>
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
@@ -95,32 +92,24 @@
                     <th>Día</th>
                     <th>Entrada</th>
                     <th>Salida</th>
-                    <th>Descanso</th>
+                    <th>Descanso</th> 
                     <th>Observación</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Lunes</td>
-                    <td>08:00</td>
-                    <td>17:00</td>
-                    <td>13:00 - 14:00</td>
-                    <td>-</td>
-                  </tr>
-                  <tr>
-                    <td>Martes</td>
-                    <td>08:00</td>
-                    <td>17:00</td>
-                    <td>13:00 - 14:00</td>
-                    <td>Turno hornos</td>
-                  </tr>
-                  <tr>
-                    <td>Miércoles</td>
-                    <td>08:00</td>
-                    <td>17:00</td>
-                    <td>13:00 - 14:00</td>
-                    <td>-</td>
-                  </tr>
+                  {% for h in horarios %}
+                    <tr>
+                      <td>{{ h.dia }}</td>
+                      <td>{{ h.entrada|time:"H:i" }}</td>
+                      <td>{{ h.salida|time:"H:i" }}</td>
+                      <td>{{ h.descanso }}</td>
+                      <td>{{ h.observacion }}</td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center text-muted">Sin datos de jornada.</td>
+                    </tr>
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
@@ -130,10 +119,17 @@
         <div class="card shadow-sm mt-4">
           <div class="card-body">
             <h5 class="card-title">Zona de trabajo</h5>
-            <p class="mb-2"><strong>Área:</strong> Producción — Hornos</p>
-            <p class="mb-2"><strong>Ubicación:</strong> Planta Central, Bodega 2</p>
-            <p class="mb-2"><strong>Supervisor:</strong> María González</p>
-            <p class="mb-0"><strong>Notas:</strong> Uso obligatorio de EPP. Capacitación pendiente sobre control de calidad (viernes 10:00).</p>
+            {% if emp.zona_trabajo %}
+              <p class="mb-2"><strong>Área:</strong> {{ emp.zona_trabajo.nombre }} — {{ emp.zona_trabajo.area }}</p>
+              <p class="mb-2"><strong>Ubicación:</strong> {{ emp.zona_trabajo.ubicacion }}</p>
+              <p class="mb-2"><strong>Supervisor:</strong> {{ emp.zona_trabajo.supervisor }}</p>
+              <p class="mb-0"><strong>Notas:</strong> {{ emp.zona_trabajo.notas|default:"—" }}</p>
+            {% else %}
+              <p class="mb-2"><strong>Área:</strong> —</p>
+              <p class="mb-2"><strong>Ubicación:</strong> —</p>
+              <p class="mb-2"><strong>Supervisor:</strong> —</p>
+              <p class="mb-0"><strong>Notas:</strong> —</p>
+            {% endif %}
           </div>
         </div>
       </div>

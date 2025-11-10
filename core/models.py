@@ -68,6 +68,17 @@ class empleado(BaseModel):
     run = models.CharField(max_length=45, unique=True)
     fono = models.IntegerField(blank=True, null=True)
     nacionalidad = models.CharField(max_length=45, blank=True, null=True)
+    
+    
+    # ⬇️ NUEVO: vínculo a ZonaTrabajo
+    zona_trabajo = models.ForeignKey(
+        'ZonaTrabajo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='empleados'
+    )
+
 
     class Meta:
         db_table = 'empleado'

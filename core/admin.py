@@ -119,11 +119,24 @@ class TurnoHasJornadaAdmin(BaseAdmin):
 class EmpleadoAdmin(BaseAdmin):
     list_display = ("id", "run", "user", "fono", "nacionalidad") + BASE_LIST
     search_fields = ("run", "user__username", "user__email")
+    autocomplete_fields = ('zona_trabajo',)  # cómodo si hay muchas zonas
     list_select_related = ("user",)
     actions = [make_active, make_inactive]
     list_filter = ("nacionalidad", "status")
     list_ordering = ("run",)
     inlines = [CuentaBancariaInline]
+
+
+    def get_nombre(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+    get_nombre.short_description = 'Nombre'
+
+
+@admin.register(ZonaTrabajo)
+class ZonaTrabajoAdmin(ScopedAdmin, BaseAdmin):
+    list_display = ("nombre", "area", "ubicacion", "supervisor", 'status')
+    search_fields = ("nombre", "area", "ubicacion", "supervisor")
+
 
 @admin.register(cuenta_bancaria)
 class CuentaBancariaAdmin(ScopedAdmin, BaseAdmin):
@@ -223,10 +236,7 @@ class PagoAdmin(ScopedAdmin, BaseAdmin):
     form = PagoForm
 
 
-@admin.register(ZonaTrabajo)
-class ZonaTrabajoAdmin(ScopedAdmin, BaseAdmin):
-    list_display = ("nombre", "area", "ubicacion", "supervisor")
-    search_fields = ("nombre", "area", "ubicacion", "supervisor")
+
 
 
 
