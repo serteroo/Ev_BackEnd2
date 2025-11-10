@@ -68,6 +68,13 @@ class empleado(BaseModel):
     run = models.CharField(max_length=45, unique=True)
     fono = models.IntegerField(blank=True, null=True)
     nacionalidad = models.CharField(max_length=45, blank=True, null=True)
+
+    cargo = models.ForeignKey(
+        cargo,                       # tu modelo está en minúsculas
+        on_delete=models.SET_NULL,   # si borran el cargo, no borres al empleado
+        null=True, blank=True,
+        related_name="empleados"
+    )
     
     
     # ⬇️ NUEVO: vínculo a ZonaTrabajo

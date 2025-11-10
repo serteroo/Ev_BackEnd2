@@ -24,7 +24,13 @@ urlpatterns = [
     path('dashboard-admin/contratos/nuevo/', v.contrato_create, name='contrato_create'),
     path('dashboard-admin/contratos/<int:pk>/editar/', v.contrato_edit, name='contrato_edit'),
     path('dashboard-admin/contratos/<int:pk>/eliminar/', v.contrato_delete, name='contrato_delete'),
-    path('dashboard-admin/crud-cargo/', v.crud_cargo_page, name='crud_cargo'),
+
+    # Gestión de cargos
+    path('dashboard-admin/empleados/cargo/<int:pk>/', v.empleado_cargo_edit, name='empleado_cargo_edit'),
+    path("dashboard-admin/crud-cargo/", v.gestion_cargos, name="crud_cargo"),
+    path("dashboard-admin/crud-cargo/nuevo/", v.cargo_create, name="cargo_create"),
+    path("dashboard-admin/crud-cargo/<int:pk>/editar/", v.cargo_edit, name="cargo_edit"),
+    path("dashboard-admin/crud-cargo/<int:pk>/eliminar/", v.cargo_delete, name="cargo_delete"),
     
     # API
     path('api/login/', v.login_json, name='login_json'),

@@ -3,20 +3,18 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from core.models import empleado, ZonaTrabajo
-
+from core.models import empleado, ZonaTrabajo, cargo
 
 User = get_user_model()
 
-ADMIN_USERNAME = "admin.rh"          # <- solo este será admin
-ADMIN_PASSWORD = "temp123456"        # <- puedes cambiarlo
+ADMIN_USERNAME = "admin.rh"
+ADMIN_PASSWORD = "temp123456"
 
 class Command(BaseCommand):
     help = "Siembra datos iniciales para empleados (admin + no-admin)"
 
     def handle(self, *args, **options):
         with transaction.atomic():
-            # crea/obtiene grupos (opcional pero útil)
             grp_admin, _ = Group.objects.get_or_create(name="Admin")
             grp_emp, _ = Group.objects.get_or_create(name="Empleado")
 
@@ -31,8 +29,9 @@ class Command(BaseCommand):
                         "run": "12.345.678-9",
                         "fono": 912345678,
                         "nacionalidad": "Chilena",
-                        "zona": "Oficina Central - Piso 2"  # <--- nombre exacto
-                    }
+                        "zona": "Oficina Central - Piso 2",
+                        "cargo": "Gerente de Recursos Humanos",
+                    },
                 },
                 {
                     "username": "maria.contreras",
@@ -44,8 +43,9 @@ class Command(BaseCommand):
                         "run": "13.456.789-0",
                         "fono": 922334455,
                         "nacionalidad": "Chilena",
-                        "zona": "Sala de Reuniones - Piso 1"
-                    }
+                        "zona": "Sala de Reuniones - Piso 1",
+                        "cargo": "Contador General",
+                    },
                 },
                 {
                     "username": "carlos.munoz",
@@ -57,8 +57,9 @@ class Command(BaseCommand):
                         "run": "14.567.890-1",
                         "fono": 933445566,
                         "nacionalidad": "Chilena",
-                        "zona": "Área de Capacitación"
-                    }
+                        "zona": "Área de Capacitación",
+                        "cargo": "Gerente de TI",
+                    },
                 },
                 {
                     "username": "juan.perez",
@@ -70,8 +71,9 @@ class Command(BaseCommand):
                         "run": "15.678.901-2",
                         "fono": 944556677,
                         "nacionalidad": "Chilena",
-                        "zona": "Oficina Contabilidad"
-                    }
+                        "zona": "Oficina Contabilidad",
+                        "cargo": "Analista Financiero",
+                    },
                 },
                 {
                     "username": "laura.torres",
@@ -83,8 +85,9 @@ class Command(BaseCommand):
                         "run": "16.789.012-3",
                         "fono": 955667788,
                         "nacionalidad": "Chilena",
-                        "zona": "Sala de Descanso"
-                    }
+                        "zona": "Sala de Descanso",
+                        "cargo": "Desarrollador Senior",
+                    },
                 },
                 {
                     "username": "roberto.sanchez",
@@ -96,8 +99,9 @@ class Command(BaseCommand):
                         "run": "17.890.123-4",
                         "fono": 966778899,
                         "nacionalidad": "Chilena",
-                        "zona": "Centro de Operaciones TI"
-                    }
+                        "zona": "Centro de Operaciones TI",
+                        "cargo": "Jefe de Departamento",
+                    },
                 },
                 {
                     "username": "patricia.mendoza",
@@ -109,8 +113,9 @@ class Command(BaseCommand):
                         "run": "18.901.234-5",
                         "fono": 977889900,
                         "nacionalidad": "Chilena",
-                        "zona": "Oficina Ventas"
-                    }
+                        "zona": "Oficina Ventas",
+                        "cargo": "Ejecutivo de Ventas",
+                    },
                 },
                 {
                     "username": "miguel.herrera",
@@ -122,8 +127,9 @@ class Command(BaseCommand):
                         "run": "19.012.345-6",
                         "fono": 988990011,
                         "nacionalidad": "Chilena",
-                        "zona": "Laboratorio Desarrollo"
-                    }
+                        "zona": "Laboratorio Desarrollo",
+                        "cargo": "Analista de RH",
+                    },
                 },
                 {
                     "username": "daniela.rios",
@@ -135,8 +141,9 @@ class Command(BaseCommand):
                         "run": "20.123.456-7",
                         "fono": 999001122,
                         "nacionalidad": "Chilena",
-                        "zona": "Laboratorio Desarrollo"
-                    }
+                        "zona": "Laboratorio Desarrollo",
+                        "cargo": "Asistente Administrativo",
+                    },
                 },
                 {
                     "username": "fernando.guzman",
@@ -148,17 +155,17 @@ class Command(BaseCommand):
                         "run": "21.234.567-8",
                         "fono": 911223344,
                         "nacionalidad": "Chilena",
-                        "zona": "Oficina Ventas"
-
-                    }
-                }
+                        "zona": "Oficina Ventas",
+                        "cargo": "Administrador de Sistemas",
+                    },
+                },
             ]
 
             empleados_creados = 0
 
             for emp_data in empleados_data:
                 try:
-                    # crear/obtener usuario
+                    # crear o actualizar usuario
                     user, user_created = User.objects.get_or_create(
                         username=emp_data["username"],
                         defaults={
@@ -169,15 +176,11 @@ class Command(BaseCommand):
                         },
                     )
 
-                    # actualizar campos base siempre
                     user.email = emp_data["email"]
                     user.first_name = emp_data["first_name"]
                     user.last_name = emp_data["last_name"]
-
-                    # contraseña SIEMPRE con hash (nuevo o existente)
                     user.set_password(emp_data["password"])
 
-                    # rol: solo admin.rh es admin, el resto empleado
                     if emp_data["username"] == ADMIN_USERNAME:
                         user.is_staff = True
                         user.is_superuser = True
@@ -187,7 +190,7 @@ class Command(BaseCommand):
 
                     user.save()
 
-                    # grupos (opcional)
+                    # asignar grupo
                     if emp_data["username"] == ADMIN_USERNAME:
                         user.groups.add(grp_admin)
                         user.groups.remove(grp_emp)
@@ -195,12 +198,30 @@ class Command(BaseCommand):
                         user.groups.add(grp_emp)
                         user.groups.remove(grp_admin)
 
-                    if user_created:
-                        self.stdout.write(f"Usuario creado: {emp_data['username']}")
-                    else:
-                        self.stdout.write(f"Usuario actualizado: {emp_data['username']}")
+                    # --- Resolver zona ---
+                    zona_nombre = emp_data["empleado_data"].get("zona")
+                    z = None
+                    if zona_nombre:
+                        try:
+                            z = ZonaTrabajo.objects.get(nombre__iexact=zona_nombre)
+                        except ZonaTrabajo.DoesNotExist:
+                            self.stdout.write(self.style.WARNING(
+                                f"Zona '{zona_nombre}' no existe. {emp_data['empleado_data']['run']} queda sin zona."
+                            ))
 
-                    # crear/actualizar empleado (clave por RUN como ya tenías)
+                    # --- Resolver cargo ---
+                    cargo_nombre = emp_data["empleado_data"].get("cargo")
+                    cargo_obj = None
+                    if cargo_nombre:
+                        try:
+                            cargo_obj = cargo.objects.get(nombre__iexact=cargo_nombre)
+                        except cargo.DoesNotExist:
+                            cargo_obj = cargo.objects.create(nombre=cargo_nombre, description="")
+                            self.stdout.write(self.style.WARNING(
+                                f"Cargo '{cargo_nombre}' no existía, creado automáticamente."
+                            ))
+
+                    # --- Crear/actualizar empleado ---
                     emp_obj, emp_created = empleado.objects.get_or_create(
                         run=emp_data["empleado_data"]["run"],
                         defaults={
@@ -208,6 +229,8 @@ class Command(BaseCommand):
                             "fono": emp_data["empleado_data"]["fono"],
                             "nacionalidad": emp_data["empleado_data"]["nacionalidad"],
                             "status": "ACTIVE",
+                            "zona_trabajo": z,
+                            "cargo": cargo_obj,
                         },
                     )
 
@@ -216,24 +239,15 @@ class Command(BaseCommand):
                         emp_obj.fono = emp_data["empleado_data"]["fono"]
                         emp_obj.nacionalidad = emp_data["empleado_data"]["nacionalidad"]
                         emp_obj.status = "ACTIVE"
+                        if emp_obj.zona_trabajo_id != (z.id if z else None):
+                            emp_obj.zona_trabajo = z
+                        if emp_obj.cargo_id != (cargo_obj.id if cargo_obj else None):
+                            emp_obj.cargo = cargo_obj
                         emp_obj.save()
                         self.stdout.write(f"Empleado actualizado: {emp_data['first_name']} {emp_data['last_name']}")
                     else:
                         empleados_creados += 1
                         self.stdout.write(f"Empleado creado: {emp_data['first_name']} {emp_data['last_name']} (RUN: {emp_data['empleado_data']['run']})")
-                    # --- ASIGNAR ZONA DE TRABAJO (si viene en la seed) ---
-                    zona_nombre = emp_data["empleado_data"].get("zona")
-                    if zona_nombre:
-                        try:
-                            z = ZonaTrabajo.objects.get(nombre__iexact=zona_nombre)
-                            if emp_obj.zona_trabajo_id != z.id:
-                                emp_obj.zona_trabajo = z
-                                emp_obj.save(update_fields=["zona_trabajo"])
-                                self.stdout.write(f"Zona asignada a {emp_obj.run}: {z.nombre}")
-                        except ZonaTrabajo.DoesNotExist:
-                            self.stdout.write(self.style.WARNING(
-                                f"Zona '{zona_nombre}' no existe. {emp_obj.run} queda sin zona."
-                            ))
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Error creando empleado {emp_data['username']}: {e}"))

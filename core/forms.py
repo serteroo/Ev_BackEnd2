@@ -1,7 +1,7 @@
 # core/forms.py
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import pago, contrato, ZonaTrabajo, empleado
+from .models import pago, contrato, ZonaTrabajo, empleado,cargo
 
 class PagoForm(forms.ModelForm):
     class Meta:
@@ -77,4 +77,13 @@ class EmpleadoZonaForm(forms.ModelForm):
         fields = ["zona_trabajo"]
         widgets = {
             "zona_trabajo": forms.Select(attrs={"class": "form-select"})
+        }
+
+class CargoForm(forms.ModelForm):
+    class Meta:
+        model = cargo                     # tu modelo está en minúsculas
+        fields = ["nombre", "description"]  # usa "descripcion" si ese es tu campo
+        widgets = {
+            "nombre": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nombre del cargo"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Descripción"}),
         }

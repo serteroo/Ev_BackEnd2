@@ -8,17 +8,15 @@ from django.contrib import messages
 from django.urls import reverse
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import empleado, liquidacion, jornada, turno_has_jornada,ZonaTrabajo
+from .models import empleado, liquidacion, jornada, turno_has_jornada,ZonaTrabajo,contrato,turno,cargo
 from .forms import EmpleadoZonaForm, ZonaTrabajoForm
 from django.contrib import messages
-
-
-
 from .forms import ContratoForm
-from .models import empleado, liquidacion, jornada, turno_has_jornada, turno, contrato
-
+from .forms import CargoForm
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseRedirect
-from core.models import turno_has_jornada, turno, jornada
+
+
 
 User = get_user_model()
 
@@ -59,16 +57,33 @@ def dashboard_empleado(request):
             .order_by('-periodo')[:2])
 
     horarios = []
-    if cto and cto.turno_has_jornada_id:
-        thj = cto.turno_has_jornada
-        if thj and thj.turno and thj.jornada:
-            horarios = [{
-                "dia": "-",
-                "entrada": thj.turno.hora_entrada,
-                "salida": thj.turno.hora_salida,
-                "descanso": "-",
-                "observacion": thj.jornada.nombre,
-            }]
+    thj = None
+
+    # 1) Solo intentamos traer la relación si realmente hay FK
+    if cto and getattr(cto, "turno_has_jornada_id", None):
+        try:
+            thj = cto.turno_has_jornada  # <-- ESTA línea faltaba en tu código
+        except ObjectDoesNotExist:
+            thj = None
+
+    # 2) Si existe la relación y sus sub-objetos, armamos el horario; si no, ponemos guiones
+    if thj and getattr(thj, "turno", None) and getattr(thj, "jornada", None):
+        horarios = [{
+            "dia": "-",
+            "entrada": thj.turno.hora_entrada,
+            "salida": thj.turno.hora_salida,
+            "descanso": "-",
+            "observacion": thj.jornada.nombre,
+        }]
+    else:
+        horarios = [{
+            "dia": "-",
+            "entrada": "-",
+            "salida": "-",
+            "descanso": "-",
+            "observacion": "-",
+        }]
+
 
     return render(request, 'rrhh/dashboard.html', {
         "emp": emp,
@@ -110,19 +125,28 @@ def dashboard_admin(request):
         cargo_nombre = cto.cargo.nombre if cto else "—"
 
         # ✅ Evita error jornada.DoesNotExist
-        horario_str = "—"
-        if cto and cto.turno_has_jornada_id:
-            thj = cto.turno_has_jornada
-            try:
-                if thj.turno and thj.jornada:
-                    horario_str = (
-                        f"{thj.turno.hora_entrada.strftime('%H:%M')}-"
-                        f"{thj.turno.hora_salida.strftime('%H:%M')} "
-                        f"({thj.jornada.nombre})"
-                    )
-            except:
-                horario_str = "—"
+        horario_str = "-"
 
+        if cto and getattr(cto, "turno_has_jornada_id", None):
+            try:
+                thj = cto.turno_has_jornada  # esta línea puede lanzar RelatedObjectDoesNotExist
+                turno = getattr(thj, "turno", None)
+                jornada = getattr(thj, "jornada", None)
+                ent = getattr(turno, "hora_entrada", None)
+                sal = getattr(turno, "hora_salida", None)
+                nom = getattr(jornada, "nombre", None)
+
+                if ent and sal and nom:
+                    # Si son TimeField/DatetimeField, strftime; si ya son str, conviértelo con str()
+                    ent_txt = ent.strftime("%H:%M") if hasattr(ent, "strftime") else str(ent)
+                    sal_txt = sal.strftime("%H:%M") if hasattr(sal, "strftime") else str(sal)
+                    horario_str = f"{ent_txt}-{sal_txt} ({nom})"
+                else:
+                    horario_str = "-"
+            except (ObjectDoesNotExist, AttributeError):
+                horario_str = "-"
+        else:
+             horario_str = "-"
         empleados_data.append({
             "id": e.id,
             "nombre": e.user.get_full_name() or e.user.username,
@@ -556,3 +580,63 @@ def horario_delete(request, pk):
     horario = get_object_or_404(turno_has_jornada, id=pk)
     horario.delete()
     return redirect('horario_jornada')
+
+#CRUD Cargos
+
+@login_required
+def gestion_cargos(request):
+    q = request.GET.get("q", "").strip()
+    cargos = cargo.objects.all().order_by("id")   # si tu BaseModel filtra por status y no ves nada, usa cargo._base_manager.all()
+    if q:
+        cargos = cargos.filter(Q(nombre__icontains=q) | Q(description__icontains=q))
+    return render(request, "rrhh/crud_cargo.html", {"cargos": cargos, "q": q})
+
+@login_required
+def cargo_create(request):
+    if request.method == "POST":
+        form = CargoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Cargo creado correctamente.")
+            return redirect("crud_cargo")
+    else:
+        form = CargoForm()
+    return render(request, "rrhh/cargo_form.html", {"form": form, "title": "Nuevo Cargo"})
+
+@login_required
+def cargo_edit(request, pk):
+    obj = get_object_or_404(cargo, pk=pk)
+    if request.method == "POST":
+        form = CargoForm(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Cargo actualizado.")
+            return redirect("crud_cargo")
+    else:
+        form = CargoForm(instance=obj)
+    return render(request, "rrhh/cargo_form.html", {"form": form, "title": "Editar Cargo"})
+
+@login_required
+def cargo_delete(request, pk):
+    obj = get_object_or_404(cargo, pk=pk)
+    if request.method == "POST":
+        # Si prefieres “borrado lógico”, comenta la línea siguiente y marca status='INACTIVE'
+        obj.delete()
+        messages.success(request, "Cargo eliminado.")
+        return redirect("crud_cargo")
+    return render(request, "rrhh/cargo_confirm_delete.html", {"obj": obj})
+
+@login_required
+def empleado_cargo_edit(request, pk):
+    emp = get_object_or_404(empleado, pk=pk)
+    cargos = cargo.objects.order_by("nombre")
+
+    if request.method == "POST":
+        cargo_id = request.POST.get("cargo_id", "").strip()
+        emp.cargo = cargo.objects.get(pk=cargo_id) if cargo_id else None
+        emp.save(update_fields=["cargo"])
+        messages.success(request, "Cargo actualizado correctamente.")
+        return redirect("empleado_cargo_edit", pk=emp.id)
+
+    ctx = {"emp": emp, "cargos": cargos}
+    return render(request, "rrhh/empleado_cargo_edit.html", ctx)
