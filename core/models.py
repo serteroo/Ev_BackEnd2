@@ -122,6 +122,7 @@ class jornada(BaseModel):
     nombre = models.CharField(max_length=45)
     horas_semanales = models.IntegerField()
 
+
     class Meta:
         db_table = 'jornada'
         managed = True

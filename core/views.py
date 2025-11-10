@@ -1,4 +1,3 @@
-# core/views.py
 import json
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -7,27 +6,20 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.urls import reverse
-from .forms import ContratoForm
-from .models import contrato
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import empleado, liquidacion, jornada, turno_has_jornada
 
+from .forms import ContratoForm
+from .models import empleado, liquidacion, jornada, turno_has_jornada, turno, contrato
 
 User = get_user_model()
 
+
 def _empleado_de_usuario(user):
-    """
-    Retorna el empleado enlazado al usuario autenticado.
-    Tu modelo se llama 'empleado' y el campo es 'user' (OneToOne).
-    """
     return empleado.objects.select_related('user').get(user=user)
 
+
 def _contrato_actual(emp: empleado):
-    """
-    Retorna el contrato más reciente del empleado.
-    Si quieres filtrar por estado 'Vigente', agrega .filter(estado="Vigente").
-    """
     return (contrato.objects
             .filter(empleado=emp)
             .order_by('-fecha_inicio')
@@ -35,15 +27,12 @@ def _contrato_actual(emp: empleado):
 
 
 def _rol_de(user):
-    # Admin si es superuser/staff o pertenece al grupo "Admin"
     if user.is_superuser or user.is_staff or user.groups.filter(name__iexact='Admin').exists():
         return 'admin'
     return 'empleado'
 
 
-# ---------- PÁGINAS ----------
 def login_page(request):
-    # si ya está logueado, redirige según rol
     if request.user.is_authenticated:
         return redirect('dash_admin' if _rol_de(request.user) == 'admin' else 'dash_empleado')
     return render(request, 'rrhh/login.html')
@@ -57,30 +46,28 @@ def dashboard_empleado(request):
     emp = _empleado_de_usuario(request.user)
     cto = _contrato_actual(emp)
 
-    # últimas 2 liquidaciones (tu modelo usa 'periodo' y 'liquido')
     liqs = (liquidacion.objects
             .filter(contrato__empleado=emp)
             .order_by('-periodo')[:2])
 
-    # Horario derivado de turno_has_jornada del contrato actual
     horarios = []
     if cto and cto.turno_has_jornada_id:
-        thj = cto.turno_has_jornada  # -> turno + jornada
-        horarios = [{
-            "dia": "-",  # tu esquema no tiene 'día' por jornada
-            "entrada": thj.turno.hora_entrada,
-            "salida": thj.turno.hora_salida,
-            "descanso": "-",
-            "observacion": thj.jornada.nombre,
-        }]
+        thj = cto.turno_has_jornada
+        if thj and thj.turno and thj.jornada:
+            horarios = [{
+                "dia": "-",
+                "entrada": thj.turno.hora_entrada,
+                "salida": thj.turno.hora_salida,
+                "descanso": "-",
+                "observacion": thj.jornada.nombre,
+            }]
 
-    ctx = {
+    return render(request, 'rrhh/dashboard.html', {
         "emp": emp,
         "contrato": cto,
         "liquidaciones": liqs,
         "horarios": horarios,
-    }
-    return render(request, 'rrhh/dashboard.html', ctx)
+    })
 
 
 @login_required
@@ -88,51 +75,51 @@ def dashboard_admin(request):
     if _rol_de(request.user) != 'admin':
         return redirect('dash_empleado')
 
-    # empleado del admin (si existe)
-    admin_emp = None
     try:
         admin_emp = empleado.objects.select_related('user', 'zona_trabajo').get(user=request.user)
     except empleado.DoesNotExist:
-        pass
+        admin_emp = None
 
-    # sus liquidaciones (derivadas por contrato)
     admin_liqs = []
     if admin_emp:
         admin_liqs = (liquidacion.objects
                       .filter(contrato__empleado=admin_emp)
                       .order_by('-periodo')[:2])
 
-    # listado de empleados con cargo/horario/zona
     q = request.GET.get('q', '').strip()
-    empleados_qs = empleado.objects.select_related('user', 'zona_trabajo').all().order_by('id')
+    empleados_qs = empleado.objects.select_related('user', 'zona_trabajo').order_by('id')
     if q:
         empleados_qs = empleados_qs.filter(
             Q(user__first_name__icontains=q) |
-            Q(user__last_name__icontains=q)  |
+            Q(user__last_name__icontains=q) |
             Q(run__icontains=q) |
             Q(zona_trabajo__nombre__icontains=q)
         )
 
-    def _contrato_actual_emp(e):
-        return (contrato.objects
-                .filter(empleado=e)
-                .order_by('-fecha_inicio')
-                .first())
-
     empleados_data = []
     for e in empleados_qs:
-        cto = _contrato_actual_emp(e)
+        cto = _contrato_actual(e)
         cargo_nombre = cto.cargo.nombre if cto else "—"
+
+        # ✅ Evita error jornada.DoesNotExist
         horario_str = "—"
         if cto and cto.turno_has_jornada_id:
-            t = cto.turno_has_jornada.turno
-            j = cto.turno_has_jornada.jornada
-            horario_str = f"{t.hora_entrada.strftime('%H:%M')}-{t.hora_salida.strftime('%H:%M')} ({j.nombre})"
+            thj = cto.turno_has_jornada
+            try:
+                if thj.turno and thj.jornada:
+                    horario_str = (
+                        f"{thj.turno.hora_entrada.strftime('%H:%M')}-"
+                        f"{thj.turno.hora_salida.strftime('%H:%M')} "
+                        f"({thj.jornada.nombre})"
+                    )
+            except:
+                horario_str = "—"
+
         empleados_data.append({
             "id": e.id,
-            "nombre": (e.user.get_full_name() or e.user.username),
+            "nombre": e.user.get_full_name() or e.user.username,
             "cargo": cargo_nombre,
-            "zona": (e.zona_trabajo.nombre if e.zona_trabajo_id else "—"),
+            "zona": e.zona_trabajo.nombre if e.zona_trabajo_id else "—",
             "horario": horario_str,
         })
 
@@ -146,11 +133,7 @@ def dashboard_admin(request):
 
 @login_required
 def horario_jornada_page(request):
-    # visible para empleados; si quieres que admin también la vea, quita el if
-    if _rol_de(request.user) != 'empleado':
-        return redirect('dash_admin')
-    return render(request, 'rrhh/horario_jornada.html')
-
+    return redirect('horario_jornada')
 
 
 @login_required
@@ -164,19 +147,17 @@ def horario_page(request):
     horarios = []
     if cto and cto.turno_has_jornada_id:
         thj = cto.turno_has_jornada
-        horarios = [{
-            "dia": "-",
-            "entrada": thj.turno.hora_entrada,
-            "salida": thj.turno.hora_salida,
-            "descanso": "-",
-            "zona": "-",          # no existe FK a ZonaTrabajo en tu esquema
-            "observacion": thj.jornada.nombre,
-        }]
+        if thj and thj.turno and thj.jornada:
+            horarios = [{
+                "dia": "-",
+                "entrada": thj.turno.hora_entrada,
+                "salida": thj.turno.hora_salida,
+                "descanso": "-",
+                "zona": "-",
+                "observacion": thj.jornada.nombre,
+            }]
 
-    return render(request, 'rrhh/horario.html', {
-        "emp": emp,
-        "horarios": horarios
-    })
+    return render(request, 'rrhh/horario.html', {"emp": emp, "horarios": horarios})
 
 
 @login_required
@@ -185,14 +166,13 @@ def liquidacion_page(request):
         return redirect('dash_admin')
 
     emp = _empleado_de_usuario(request.user)
-    qs = (liquidacion.objects
-          .filter(contrato__empleado=emp)
-          .order_by('-periodo'))
+    qs = liquidacion.objects.filter(contrato__empleado=emp).order_by('-periodo')
 
     last = request.session.get('liq_last_page', 1)
     page_number = request.GET.get('page') or last
     paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(page_number)
+
     request.session['liq_last_page'] = page_obj.number
 
     return render(request, 'rrhh/liquidacion.html', {
@@ -200,14 +180,17 @@ def liquidacion_page(request):
         "page_obj": page_obj
     })
 
+
 def is_admin(u):
     return u.is_authenticated and u.is_staff
+
 
 @login_required
 @user_passes_test(is_admin, login_url='/')
 def contratos_admin_page(request):
-    contratos = contrato.objects.select_related('empleado', 'departamento', 'cargo').order_by('-fecha_inicio')
-    return render(request, 'rrhh/contratos_admin.html', {'contratos': contratos})
+    contratos_qs = contrato.objects.select_related('empleado', 'departamento', 'cargo').order_by('-fecha_inicio')
+    return render(request, 'rrhh/contratos_admin.html', {'contratos': contratos_qs})
+
 
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -221,6 +204,7 @@ def contrato_create(request):
     else:
         form = ContratoForm()
     return render(request, 'rrhh/contrato_form.html', {'form': form, 'titulo': 'Nuevo contrato'})
+
 
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -236,6 +220,7 @@ def contrato_edit(request, pk):
         form = ContratoForm(instance=obj)
     return render(request, 'rrhh/contrato_form.html', {'form': form, 'titulo': 'Editar contrato'})
 
+
 @login_required
 @user_passes_test(is_admin, login_url='/')
 def contrato_delete(request, pk):
@@ -247,7 +232,67 @@ def contrato_delete(request, pk):
     return render(request, 'rrhh/contrato_confirm_delete.html', {'obj': obj})
 
 
-# ---------- API ----------
+# ✅ CRUD HORARIOS
+@login_required
+@user_passes_test(is_admin, login_url='/')
+def horario_jornada_list(request):
+    horarios = turno_has_jornada.objects.select_related('turno', 'jornada').all()
+    return render(request, 'rrhh/horario_jornada.html', {"horarios": horarios})
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/')
+def horario_jornada_create(request):
+    if request.method == "POST":
+        nombre = request.POST.get("nombre")
+        inicio = request.POST.get("hora_inicio")
+        fin = request.POST.get("hora_fin")
+
+        j = jornada.objects.create(nombre=nombre, horas_semanales=40)
+        t = turno.objects.create(hora_entrada=inicio, hora_salida=fin)
+        turno_has_jornada.objects.create(turno=t, jornada=j)
+
+        messages.success(request, "Horario creado correctamente.")
+        return redirect('horario_jornada')
+
+    return redirect('horario_jornada')
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/')
+def horario_jornada_update(request, pk):
+    h = get_object_or_404(turno_has_jornada, pk=pk)
+
+    if request.method == "POST":
+        h.jornada.nombre = request.POST.get("nombre")
+        h.turno.hora_entrada = request.POST.get("hora_inicio")
+        h.turno.hora_salida = request.POST.get("hora_fin")
+
+        h.jornada.save()
+        h.turno.save()
+
+        messages.success(request, "Horario actualizado.")
+        return redirect('horario_jornada')
+
+    return redirect('horario_jornada')
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/')
+def horario_jornada_delete(request, pk):
+    h = get_object_or_404(turno_has_jornada, pk=pk)
+    h.turno.delete()
+    h.jornada.delete()
+    h.delete()
+    messages.success(request, "Horario eliminado.")
+    return redirect('horario_jornada')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login_page')
+
+
 @csrf_exempt
 def login_json(request):
     if request.method != 'POST':
@@ -260,6 +305,7 @@ def login_json(request):
 
     email = (data.get('email') or '').strip().lower()
     password = data.get('password') or ''
+
     if not email or not password:
         return JsonResponse({'ok': False, 'msg': 'Faltan credenciales'}, status=400)
 
@@ -278,20 +324,16 @@ def login_json(request):
     return JsonResponse({'ok': True, 'user': {'id': user.id, 'email': user.email, 'rol': rol}})
 
 
-def logout_view(request):
-    logout(request)
-    return redirect('login_page')
-
-
 @login_required
 def me(request):
     return JsonResponse({'email': request.user.email, 'rol': _rol_de(request.user)})
 
+
 @login_required
 @user_passes_test(lambda u: u.is_staff, login_url='/')
 def horario_admin_page(request):
-    # Puedes reutilizar el mismo template del empleado
-    return render(request, 'rrhh/horario_jornada.html')
+    return redirect('horario_jornada')
+
 
 @login_required
 def contrato_empleado_page(request):
@@ -302,13 +344,15 @@ def contrato_empleado_page(request):
     cto = _contrato_actual(emp)
     return render(request, 'rrhh/contrato.html', {"emp": emp, "contrato": cto})
 
+
 @login_required
 def liquidaciones_admin_page(request):
-    # Listado de liquidaciones para el admin
-    return render(request, 'rrhh/liquidaciones_admin.html')   # cambia el template si usas otro
+    return render(request, 'rrhh/liquidaciones_admin.html')
 
-def is_admin(u):  # solo staff entra al CRUD
+
+def is_admin(u):
     return u.is_authenticated and u.is_staff
+
 
 @user_passes_test(is_admin)
 def crud_cargo_page(request):

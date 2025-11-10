@@ -1,4 +1,3 @@
-# proyecto/urls.py
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -26,6 +25,12 @@ urlpatterns = [
     path('dashboard-admin/contratos/<int:pk>/editar/', v.contrato_edit, name='contrato_edit'),
     path('dashboard-admin/contratos/<int:pk>/eliminar/', v.contrato_delete, name='contrato_delete'),
     path('dashboard-admin/crud-cargo/', v.crud_cargo_page, name='crud_cargo'),
+
+    # ✅ NUEVAS RUTAS CRUD HORARIO
+    path('dashboard-admin/horarios/jornadas/', v.horario_jornada_list, name='horario_jornada'),
+    path('dashboard-admin/horarios/jornadas/crear/', v.horario_jornada_create, name='horario_create'),
+    path('dashboard-admin/horarios/jornadas/<int:pk>/editar/', v.horario_jornada_update, name='horario_update'),
+    path('dashboard-admin/horarios/jornadas/<int:pk>/eliminar/', v.horario_jornada_delete, name='horario_delete'),
 
     # API
     path('api/login/', v.login_json, name='login_json'),

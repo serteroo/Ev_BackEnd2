@@ -282,11 +282,14 @@
             <div class="label-muted">Horario</div>
             <div id="vHorario" class="fw-semibold">—</div>
           </div>
-        <button class="btn btn-sm btn-outline-primary" id="btnEditHorario">Editar</button>
+        <a href="{% url 'horario_jornada' %}?empleado_id={{ currentId }}" class="btn btn-sm btn-outline-primary">
+          Gestionar horario
+        </a>
+
         </div>
         <div class="mt-2 d-none" id="grpHorario">
           <div class="input-group">
-            <input class="form-control" id="inHorario" placeholder="Ej: 08:00-17:00 (L-V)">
+            <input class="form-control mb-2" name="horas" placeholder="40">
             <button class="btn btn-primary" id="btnSaveHorario">Guardar</button>
             <button class="btn btn-outline-secondary" id="btnCancelHorario">Cancelar</button>
           </div>
