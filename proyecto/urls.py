@@ -26,13 +26,6 @@ urlpatterns = [
     path('dashboard-admin/contratos/<int:pk>/eliminar/', v.contrato_delete, name='contrato_delete'),
     path('dashboard-admin/crud-cargo/', v.crud_cargo_page, name='crud_cargo'),
     
-
-    # NUEVAS RUTAS CRUD HORARIO
-    path('dashboard-admin/horarios/jornadas/', v.horario_jornada_list, name='horario_jornada'),
-    path('dashboard-admin/horarios/jornadas/crear/', v.horario_jornada_create, name='horario_create'),
-    path('dashboard-admin/horarios/jornadas/<int:pk>/editar/', v.horario_jornada_update, name='horario_update'),
-    path('dashboard-admin/horarios/jornadas/<int:pk>/eliminar/', v.horario_jornada_delete, name='horario_delete'),
-
     # API
     path('api/login/', v.login_json, name='login_json'),
     path('api/logout/', v.logout_view, name='logout'),
@@ -43,6 +36,15 @@ urlpatterns = [
     path('dashboard-admin/zonas/nueva/', v.zona_create, name='zona_create'),
     path('dashboard-admin/zonas/<int:pk>/editar/', v.zona_edit, name='zona_edit'),
     path('dashboard-admin/zonas/<int:pk>/eliminar/', v.zona_delete, name='zona_delete'),
+    
+
+# CRUD Turno-Jornada
+    path('dashboard-admin/horarios/jornada/', v.horario_jornada, name='horario_jornada'),
+    path('dashboard-admin/horarios/jornada/nuevo/', v.horario_create, name='horario_create'),
+    path('dashboard-admin/horarios/jornada/<int:pk>/editar/', v.horario_update, name='horario_update'),
+    path('dashboard-admin/horarios/jornada/<int:pk>/eliminar/', v.horario_delete, name='horario_delete'),
+
+
 
     # Asignación de zona a empleados
     path('dashboard-admin/empleados/zonas/', v.empleado_zonas_list, name='empleado_zonas_list'),

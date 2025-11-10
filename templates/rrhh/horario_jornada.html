@@ -2,190 +2,123 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Horarios — Fornería</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
-    .brand { color:#dc3545; font-weight:700; }
-    .avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; }
-    .table thead th { white-space: nowrap; }
-    .card h5 { font-weight:700; }
+    body{ font-family: Inter, system-ui; background:#f8f9fa; }
+    .brand{ color:#dc3545; font-weight:700; }
+    .avatar{ width:40px; height:40px; border-radius:50%; object-fit:cover; }
+    .card h5{ font-weight:700; }
+    .table thead th{ white-space:nowrap; }
   </style>
 </head>
-<body class="bg-light">
+<body>
 
-  <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">
-        <span class="h4 m-0 brand">Fornería</span>
-      </a>
+<!-- ✅ TOP BAR -->
+<nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <span class="h4 m-0 brand">Fornería</span>
+    </a>
 
-      <div class="ms-auto d-flex align-items-center gap-2">
-        <img src="https://ui-avatars.com/api/?name={{ request.user.first_name }}+{{ request.user.last_name }}&background=dc3545&color=fff&bold=true"
-             alt="foto perfil" class="avatar">
-        <span class="fw-semibold">{{ request.user.get_full_name }} (Admin)</span>
-        <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm px-3">Cerrar sesión</a>
-      </div>
-    </div>
-  </nav>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <img src="https://ui-avatars.com/api/?name={{ request.user.first_name }}+{{ request.user.last_name }}&background=dc3545&color=fff&bold=true"
+           class="avatar" alt="foto">
 
-  <!-- CONTENIDO -->
-  <div class="container-fluid py-4">
-    <div class="row">
+      <span class="fw-semibold">
+        {{ request.user.get_full_name|default:request.user.username }} (Admin)
+      </span>
 
-      <!-- SIDEBAR -->
-      <div class="col-lg-2 col-md-3 d-none d-md-block">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h6 class="card-title text-muted mb-3">NAVEGACIÓN</h6>
-            <ul class="nav nav-pills flex-column gap-2">
-              {% with n=request.resolver_match.url_name %}
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'dash_admin' %}active{% endif %}" href="{% url 'dash_admin' %}">
-                  <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'crud_cargo' %}active{% endif %}" href="{% url 'crud_cargo' %}">
-                  <i class="bi bi-briefcase me-2"></i>Gestión de Cargos
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'contratos_admin' %}active{% endif %}" href="{% url 'contratos_admin' %}">
-                  <i class="bi bi-file-earmark-text me-2"></i>Contratos
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'liquidaciones_admin' %}active{% endif %}" href="{% url 'liquidaciones_admin' %}">
-                  <i class="bi bi-cash-coin me-2"></i>Liquidaciones
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'horarios_admin' %}active{% endif %}" href="{% url 'horarios_admin' %}">
-                  <i class="bi bi-clock me-2"></i>Horarios
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'zonas_list' %}active{% endif %}" href="{% url 'zonas_list' %}">
-                  <i class="bi bi-geo-alt me-2"></i>Zonas de trabajo
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if n == 'empleado_zonas_list' %}active{% endif %}" href="{% url 'empleado_zonas_list' %}">
-                  <i class="bi bi-people me-2"></i>Asignar zonas
-                </a>
-              </li>
-              {% endwith %}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- CONTENIDO PRINCIPAL -->
-      <div class="col-lg-10 col-md-9">
-
-        <!-- TÍTULO -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h4 class="mb-0">Gestión de Horarios</h4>
-          <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalNuevo">
-            <i class="bi bi-plus-lg me-2"></i>Nuevo horario
-          </button>
-        </div>
-
-        <!-- TABLA -->
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th>#</th>
-                    <th>Nombre Jornada</th>
-                    <th>Hora Inicio</th>
-                    <th>Hora Término</th>
-                    <th>Tipo</th>
-                    <th class="text-end">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for h in horarios %}
-                  <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ h.jornada.nombre }}</td>
-                    <td>{{ h.turno.hora_entrada|time:"H:i" }}</td>
-                    <td>{{ h.turno.hora_salida|time:"H:i" }}</td>
-                    <td>{{ h.jornada.nombre }}</td>
-                    <td class="text-end">
-                      <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditar{{ h.id }}">Editar</button>
-                      <a href="{% url 'horario_delete' h.id %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
-                    </td>
-                  </tr>
-
-                  <!-- MODAL EDITAR -->
-                  <div class="modal fade" id="modalEditar{{ h.id }}" tabindex="-1">
-                    <div class="modal-dialog">
-                      <div class="modal-content">
-                        <form method="post" action="{% url 'horario_update' h.id %}">
-                          {% csrf_token %}
-                          <div class="modal-header">
-                            <h5 class="modal-title">Editar horario</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                          </div>
-                          <div class="modal-body">
-                            <input class="form-control mb-2" name="nombre" value="{{ h.jornada.nombre }}">
-                            <input type="time" class="form-control mb-2" name="hora_inicio" value="{{ h.turno.hora_entrada|time:'H:i' }}">
-                            <input type="time" class="form-control mb-2" name="hora_fin" value="{{ h.turno.hora_salida|time:'H:i' }}">
-                          </div>
-                          <div class="modal-footer">
-                            <button class="btn btn-primary">Guardar cambios</button>
-                            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                  {% empty %}
-                  <tr><td colspan="6" class="text-center text-muted">No hay horarios registrados.</td></tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Cerrar sesión</a>
     </div>
   </div>
+</nav>
 
-  <!-- MODAL NUEVO -->
-  <div class="modal fade" id="modalNuevo" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <form method="post" action="{% url 'horario_create' %}">
-          {% csrf_token %}
-          <div class="modal-header">
-            <h5 class="modal-title">Nuevo horario</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input class="form-control mb-2" name="nombre" placeholder="Nombre jornada (Ej: Completa)">
-            <input type="time" class="form-control mb-2" name="hora_inicio" placeholder="08:00">
-            <input type="time" class="form-control mb-2" name="hora_fin" placeholder="17:00">
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-danger">Guardar</button>
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          </div>
-        </form>
+<div class="container-fluid py-4">
+  <div class="row">
+
+    <!-- ✅ SIDEBAR RESTAURADO -->
+    <div class="col-lg-2 col-md-3 d-none d-md-block">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6 class="text-muted mb-3">NAVEGACIÓN</h6>
+          <ul class="nav nav-pills flex-column gap-2">
+            <li><a class="nav-link" href="{% url 'dash_admin' %}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+
+            <li><a class="nav-link" href="{% url 'crud_cargo' %}"><i class="bi bi-briefcase me-2"></i>Gestión de Cargos</a></li>
+
+            <li><a class="nav-link" href="{% url 'contratos_admin' %}"><i class="bi bi-file-earmark-text me-2"></i>Contratos</a></li>
+
+            <li><a class="nav-link" href="{% url 'liquidaciones_admin' %}"><i class="bi bi-cash-coin me-2"></i>Liquidaciones</a></li>
+
+            <!-- ✅ ESTA SELECCIONADA EN AZUL -->
+            <li><a class="nav-link active" href="{% url 'horarios_admin' %}"><i class="bi bi-clock me-2"></i>Horarios</a></li>
+
+            <li><a class="nav-link" href="{% url 'zonas_list' %}"><i class="bi bi-geo-alt me-2"></i>Zonas de trabajo</a></li>
+
+            <li><a class="nav-link" href="{% url 'empleado_zonas_list' %}"><i class="bi bi-people me-2"></i>Asignar zonas</a></li>
+          </ul>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- ✅ CONTENIDO -->
+    <div class="col-lg-10 col-md-9">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Gestión de horarios por jornada</h5>
+            <a href="{% url 'horario_create' %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus-circle me-1"></i>Agregar horario
+            </a>
+          </div>
+
+          <!-- ✅ TABLA DE TURNOS Y JORNADAS -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Turno</th>
+                  <th>Jornada</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+
+              <tbody>
+              {% for h in horarios %}
+                <tr>
+                  <td>{{ forloop.counter }}</td>
+                  <td>{{ h.turno.nombre }} — {{ h.turno.hora_inicio }} a {{ h.turno.hora_fin }}</td>
+                  <td>{{ h.jornada.nombre }} ({{ h.jornada.horas }} hrs)</td>
+                  <td class="text-nowrap">
+                    <a href="{% url 'horario_update' h.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                    <a href="{% url 'horario_delete' h.id %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-center text-muted">No hay horarios asignados.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ✅ BOOTSTRAP -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>

@@ -10,10 +10,15 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import empleado, liquidacion, jornada, turno_has_jornada,ZonaTrabajo
 from .forms import EmpleadoZonaForm, ZonaTrabajoForm
+from django.contrib import messages
+
 
 
 from .forms import ContratoForm
 from .models import empleado, liquidacion, jornada, turno_has_jornada, turno, contrato
+
+from django.http import HttpResponseRedirect
+from core.models import turno_has_jornada, turno, jornada
 
 User = get_user_model()
 
@@ -495,3 +500,59 @@ def liquidaciones_list(request):
     }
     return render(request, 'rrhh/liquidaciones_list.html', context)
 
+
+
+@login_required
+def horario_jornada(request):
+    horarios = turno_has_jornada.objects.select_related('turno', 'jornada').all()
+    return render(request, 'rrhh/horario_jornada.html', {
+        'horarios': horarios
+    })
+@login_required
+def horario_create(request):
+    turnos = turno.objects.all()
+    jornadas = jornada.objects.all()
+
+    if request.method == 'POST':
+        t = request.POST.get('turno')
+        j = request.POST.get('jornada')
+        turno_sel = turno.objects.get(pk=t)
+        jornada_sel = jornada.objects.get(pk=j)
+
+        turno_has_jornada.objects.create(turno=turno_sel, jornada=jornada_sel)
+
+        messages.success(request, "Horario creado correctamente ✅")
+        return redirect('horario_jornada')
+
+    return render(request, 'rrhh/horario_form.html', {
+        'turnos': turnos,
+        'jornadas': jornadas
+    })
+
+
+
+@login_required
+def horario_update(request, pk):
+    horario = get_object_or_404(turno_has_jornada, id=pk)
+    turnos = turno.objects.all()
+    jornadas = jornada.objects.all()
+
+    if request.method == "POST":
+        horario.turno = get_object_or_404(turno, id=request.POST.get('turno'))
+        horario.jornada = get_object_or_404(jornada, id=request.POST.get('jornada'))
+        horario.save()
+        return redirect('horario_jornada')
+
+    return render(request, 'rrhh/horario_form.html', {
+        'horario': horario,
+        'turnos': turnos,
+        'jornadas': jornadas,
+        'accion': 'Editar'
+    })
+
+
+@login_required
+def horario_delete(request, pk):
+    horario = get_object_or_404(turno_has_jornada, id=pk)
+    horario.delete()
+    return redirect('horario_jornada')
