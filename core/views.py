@@ -1,35 +1,64 @@
+# core/views.py
 import json
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.urls import reverse
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import empleado, liquidacion, jornada, turno_has_jornada,ZonaTrabajo,contrato,turno,cargo
-from .forms import EmpleadoZonaForm, ZonaTrabajoForm
-from django.contrib import messages
-from .forms import ContratoForm
-from .forms import CargoForm
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponseRedirect
 
-
+from .models import (
+    empleado,
+    liquidacion,
+    jornada,
+    turno_has_jornada,
+    ZonaTrabajo,
+    contrato,
+    turno,
+    cargo,
+)
+from .forms import EmpleadoZonaForm, ZonaTrabajoForm, ContratoForm, CargoForm
 
 User = get_user_model()
 
+
+# ---------------------------
+# Helpers
+# ---------------------------
+
+@login_required
+@user_passes_test(lambda u: u.is_staff, login_url='/')
+def horario_admin_page(request):
+    # Mantiene tu comportamiento anterior: redirigir al listado de horarios
+    return redirect('horario_jornada')
 
 def _empleado_de_usuario(user):
     return empleado.objects.select_related('user').get(user=user)
 
 
 def _contrato_actual(emp: empleado):
-    return (contrato.objects
-            .filter(empleado=emp)
-            .order_by('-fecha_inicio')
-            .first())
+    """
+    Trae el contrato más reciente del empleado con relaciones para
+    evitar 'object (...)' en plantillas.
+    """
+    return (
+        contrato.objects
+        .select_related(
+            'empleado',
+            'cargo',
+            'departamento',
+            'turno_has_jornada',
+            'turno_has_jornada__turno',
+            'turno_has_jornada__jornada',
+        )
+        .filter(empleado=emp)
+        .order_by('-fecha_inicio', '-id')
+        .first()
+    )
 
 
 def _rol_de(user):
@@ -38,12 +67,63 @@ def _rol_de(user):
     return 'empleado'
 
 
+def is_admin(u):
+    return u.is_authenticated and u.is_staff
+
+
+# ---------------------------
+# Auth / sesión
+# ---------------------------
 def login_page(request):
     if request.user.is_authenticated:
         return redirect('dash_admin' if _rol_de(request.user) == 'admin' else 'dash_empleado')
     return render(request, 'rrhh/login.html')
 
 
+@csrf_exempt
+def login_json(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'msg': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    if not email or not password:
+        return JsonResponse({'ok': False, 'msg': 'Faltan credenciales'}, status=400)
+
+    try:
+        u = User.objects.get(email__iexact=email)
+        username = u.get_username()
+    except User.DoesNotExist:
+        return JsonResponse({'ok': False, 'msg': 'Usuario no encontrado o inactivo'}, status=401)
+
+    user = authenticate(request, username=username, password=password)
+    if not user or not user.is_active:
+        return JsonResponse({'ok': False, 'msg': 'Credenciales inválidas'}, status=401)
+
+    login(request, user)
+    rol = _rol_de(user)
+    return JsonResponse({'ok': True, 'user': {'id': user.id, 'email': user.email, 'rol': rol}})
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login_page')
+
+
+@login_required
+def me(request):
+    return JsonResponse({'email': request.user.email, 'rol': _rol_de(request.user)})
+
+
+# ---------------------------
+# Dashboards
+# ---------------------------
 @login_required
 def dashboard_empleado(request):
     if _rol_de(request.user) != 'empleado':
@@ -52,21 +132,21 @@ def dashboard_empleado(request):
     emp = _empleado_de_usuario(request.user)
     cto = _contrato_actual(emp)
 
-    liqs = (liquidacion.objects
-            .filter(contrato__empleado=emp)
-            .order_by('-periodo')[:2])
+    liqs = (
+        liquidacion.objects
+        .filter(contrato__empleado=emp)
+        .order_by('-periodo')[:2]
+    )
 
     horarios = []
     thj = None
 
-    # 1) Solo intentamos traer la relación si realmente hay FK
     if cto and getattr(cto, "turno_has_jornada_id", None):
         try:
-            thj = cto.turno_has_jornada  # <-- ESTA línea faltaba en tu código
+            thj = cto.turno_has_jornada
         except ObjectDoesNotExist:
             thj = None
 
-    # 2) Si existe la relación y sus sub-objetos, armamos el horario; si no, ponemos guiones
     if thj and getattr(thj, "turno", None) and getattr(thj, "jornada", None):
         horarios = [{
             "dia": "-",
@@ -83,7 +163,6 @@ def dashboard_empleado(request):
             "descanso": "-",
             "observacion": "-",
         }]
-
 
     return render(request, 'rrhh/dashboard.html', {
         "emp": emp,
@@ -105,9 +184,11 @@ def dashboard_admin(request):
 
     admin_liqs = []
     if admin_emp:
-        admin_liqs = (liquidacion.objects
-                      .filter(contrato__empleado=admin_emp)
-                      .order_by('-periodo')[:2])
+        admin_liqs = (
+            liquidacion.objects
+            .filter(contrato__empleado=admin_emp)
+            .order_by('-periodo')[:2]
+        )
 
     q = request.GET.get('q', '').strip()
     empleados_qs = empleado.objects.select_related('user', 'zona_trabajo').order_by('id')
@@ -122,31 +203,25 @@ def dashboard_admin(request):
     empleados_data = []
     for e in empleados_qs:
         cto = _contrato_actual(e)
-        cargo_nombre = cto.cargo.nombre if cto else "—"
+        cargo_nombre = cto.cargo.nombre if (cto and cto.cargo) else "—"
 
-        # ✅ Evita error jornada.DoesNotExist
         horario_str = "-"
-
         if cto and getattr(cto, "turno_has_jornada_id", None):
             try:
-                thj = cto.turno_has_jornada  # esta línea puede lanzar RelatedObjectDoesNotExist
-                turno = getattr(thj, "turno", None)
-                jornada = getattr(thj, "jornada", None)
-                ent = getattr(turno, "hora_entrada", None)
-                sal = getattr(turno, "hora_salida", None)
-                nom = getattr(jornada, "nombre", None)
+                thj = cto.turno_has_jornada
+                trn = getattr(thj, "turno", None)
+                jor = getattr(thj, "jornada", None)
+                ent = getattr(trn, "hora_entrada", None)
+                sal = getattr(trn, "hora_salida", None)
+                nom = getattr(jor, "nombre", None)
 
                 if ent and sal and nom:
-                    # Si son TimeField/DatetimeField, strftime; si ya son str, conviértelo con str()
                     ent_txt = ent.strftime("%H:%M") if hasattr(ent, "strftime") else str(ent)
                     sal_txt = sal.strftime("%H:%M") if hasattr(sal, "strftime") else str(sal)
                     horario_str = f"{ent_txt}-{sal_txt} ({nom})"
-                else:
-                    horario_str = "-"
             except (ObjectDoesNotExist, AttributeError):
                 horario_str = "-"
-        else:
-             horario_str = "-"
+
         empleados_data.append({
             "id": e.id,
             "nombre": e.user.get_full_name() or e.user.username,
@@ -163,6 +238,9 @@ def dashboard_admin(request):
     })
 
 
+# ---------------------------
+# Horarios (empleado y admin)
+# ---------------------------
 @login_required
 def horario_jornada_page(request):
     return redirect('horario_jornada')
@@ -192,6 +270,9 @@ def horario_page(request):
     return render(request, 'rrhh/horario.html', {"emp": emp, "horarios": horarios})
 
 
+# ---------------------------
+# Liquidaciones (empleado)
+# ---------------------------
 @login_required
 def liquidacion_page(request):
     if _rol_de(request.user) != 'empleado':
@@ -213,14 +294,71 @@ def liquidacion_page(request):
     })
 
 
-def is_admin(u):
-    return u.is_authenticated and u.is_staff
+@login_required
+def liquidaciones_list(request):
+    """
+    Lista las liquidaciones del empleado asociado al usuario logueado.
+    """
+    emp = None
+    try:
+        emp = empleado.objects.get(user=request.user)
+    except empleado.DoesNotExist:
+        emp = None
+
+    qs = liquidacion.objects.none()
+    if emp:
+        qs = (
+            liquidacion.objects
+            .filter(contrato__empleado=emp)
+            .select_related('contrato')
+            .order_by('-periodo')
+        )
+
+    paginator = Paginator(qs, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    back_name = 'dash_admin' if _rol_de(request.user) == 'admin' else 'dash_empleado'
+
+    context = {
+        'page_obj': page_obj,
+        'liqs': page_obj.object_list,
+        'back_name': back_name,
+    }
+    return render(request, 'rrhh/liquidaciones_list.html', context)
 
 
+# ---------------------------
+# Contrato del empleado (vista que necesitas)
+# ---------------------------
+@login_required
+def contrato_empleado_page(request):
+    """
+    Muestra el contrato del usuario autenticado.
+    """
+    if _rol_de(request.user) != 'empleado':
+        return redirect('dash_admin')
+
+    emp = _empleado_de_usuario(request.user)
+    cto = _contrato_actual(emp)
+
+    return render(request, 'rrhh/contrato.html', {
+        "emp": emp,
+        "contrato": cto,
+    })
+
+
+# ---------------------------
+# Módulo Contratos (admin)
+# ---------------------------
 @login_required
 @user_passes_test(is_admin, login_url='/')
 def contratos_admin_page(request):
-    contratos_qs = contrato.objects.select_related('empleado', 'departamento', 'cargo').order_by('-fecha_inicio')
+    contratos_qs = (
+        contrato.objects
+        .select_related('empleado__user', 'departamento', 'cargo')
+        .order_by('-fecha_inicio', '-id')
+    )
     return render(request, 'rrhh/contratos_admin.html', {'contratos': contratos_qs})
 
 
@@ -263,8 +401,9 @@ def contrato_delete(request, pk):
         return redirect('contratos_admin')
     return render(request, 'rrhh/contrato_confirm_delete.html', {'obj': obj})
 
+
 # ---------------------------
-# CRUD Zonas de Trabajo
+# CRUD Zonas de Trabajo (admin)
 # ---------------------------
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -280,14 +419,15 @@ def zonas_list(request):
             Q(supervisor__icontains=q)
         )
 
-    paginator = Paginator(zonas, 5)               # ← 5 por página
+    paginator = Paginator(zonas, 5)
     page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)    # ← objeto de página
+    page_obj = paginator.get_page(page_number)
 
     return render(request, "rrhh/zonas_list.html", {
         "q": q,
-        "page_obj": page_obj,                     # ← pásalo al template
+        "page_obj": page_obj,
     })
+
 
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -301,6 +441,7 @@ def zona_create(request):
     else:
         form = ZonaTrabajoForm()
     return render(request, "rrhh/zona_form.html", {"form": form, "titulo": "Nueva zona"})
+
 
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -316,6 +457,7 @@ def zona_edit(request, pk):
         form = ZonaTrabajoForm(instance=z)
     return render(request, "rrhh/zona_form.html", {"form": form, "titulo": "Editar zona"})
 
+
 @login_required
 @user_passes_test(is_admin, login_url='/')
 def zona_delete(request, pk):
@@ -326,8 +468,9 @@ def zona_delete(request, pk):
         return redirect("zonas_list")
     return render(request, "rrhh/zona_confirm_delete.html", {"obj": z})
 
+
 # ---------------------------
-# Asignar/Cambiar zona a Empleado
+# Asignar/Cambiar zona a Empleado (admin)
 # ---------------------------
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -342,6 +485,7 @@ def empleado_zonas_list(request):
             Q(zona_trabajo__nombre__icontains=q)
         )
     return render(request, "rrhh/empleado_zonas_list.html", {"empleados": emps, "q": q})
+
 
 @login_required
 @user_passes_test(is_admin, login_url='/')
@@ -363,7 +507,9 @@ def empleado_zona_edit(request, pk):
     )
 
 
-# ✅ CRUD HORARIOS
+# ---------------------------
+# CRUD HORARIOS (admin)
+# ---------------------------
 @login_required
 @user_passes_test(is_admin, login_url='/')
 def horario_jornada_list(request):
@@ -419,119 +565,15 @@ def horario_jornada_delete(request, pk):
     return redirect('horario_jornada')
 
 
-def logout_view(request):
-    logout(request)
-    return redirect('login_page')
-
-
-@csrf_exempt
-def login_json(request):
-    if request.method != 'POST':
-        return JsonResponse({'ok': False, 'msg': 'Método no permitido'}, status=405)
-
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-    except Exception:
-        data = request.POST
-
-    email = (data.get('email') or '').strip().lower()
-    password = data.get('password') or ''
-
-    if not email or not password:
-        return JsonResponse({'ok': False, 'msg': 'Faltan credenciales'}, status=400)
-
-    try:
-        u = User.objects.get(email__iexact=email)
-        username = u.get_username()
-    except User.DoesNotExist:
-        return JsonResponse({'ok': False, 'msg': 'Usuario no encontrado o inactivo'}, status=401)
-
-    user = authenticate(request, username=username, password=password)
-    if not user or not user.is_active:
-        return JsonResponse({'ok': False, 'msg': 'Credenciales inválidas'}, status=401)
-
-    login(request, user)
-    rol = _rol_de(user)
-    return JsonResponse({'ok': True, 'user': {'id': user.id, 'email': user.email, 'rol': rol}})
-
-
-@login_required
-def me(request):
-    return JsonResponse({'email': request.user.email, 'rol': _rol_de(request.user)})
-
-
-@login_required
-@user_passes_test(lambda u: u.is_staff, login_url='/')
-def horario_admin_page(request):
-    return redirect('horario_jornada')
-
-
-@login_required
-def contrato_empleado_page(request):
-    if _rol_de(request.user) != 'empleado':
-        return redirect('dash_admin')
-
-    emp = _empleado_de_usuario(request.user)
-    cto = _contrato_actual(emp)
-    return render(request, 'rrhh/contrato.html', {"emp": emp, "contrato": cto})
-
-
-@login_required
-def liquidaciones_admin_page(request):
-    return render(request, 'rrhh/liquidaciones_admin.html')
-
-
-def is_admin(u):
-    return u.is_authenticated and u.is_staff
-
-
-@user_passes_test(is_admin)
-def crud_cargo_page(request):
-    return render(request, 'rrhh/crud_cargo.html')
-
-@login_required
-def liquidaciones_list(request):
-    """
-    Lista las liquidaciones del empleado asociado al usuario logueado.
-    Sirve para /dashboard/liquidaciones/ y /dashboard-admin/liquidaciones/
-    """
-    # localizar empleado del usuario
-    emp = None
-    try:
-        emp = empleado.objects.get(user=request.user)
-    except empleado.DoesNotExist:
-        emp = None
-
-    qs = liquidacion.objects.none()
-    if emp:
-        qs = (liquidacion.objects
-              .filter(contrato__empleado=emp)
-              .select_related('contrato')
-              .order_by('-periodo'))
-
-    # paginación
-    paginator = Paginator(qs, 10)  # 10 filas por página (ajusta si quieres)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    # para el botón "Volver al dashboard"
-    back_name = 'dash_admin' if _rol_de(request.user) == 'admin' else 'dash_empleado'
-
-    context = {
-        'page_obj': page_obj,
-        'liqs': page_obj.object_list,    # comodidad en el template
-        'back_name': back_name,
-    }
-    return render(request, 'rrhh/liquidaciones_list.html', context)
-
-
-
+# ---------------------------
+# Horario simple (admin UI de apoyo)
+# ---------------------------
 @login_required
 def horario_jornada(request):
     horarios = turno_has_jornada.objects.select_related('turno', 'jornada').all()
-    return render(request, 'rrhh/horario_jornada.html', {
-        'horarios': horarios
-    })
+    return render(request, 'rrhh/horario_jornada.html', {'horarios': horarios})
+
+
 @login_required
 def horario_create(request):
     turnos = turno.objects.all()
@@ -548,11 +590,7 @@ def horario_create(request):
         messages.success(request, "Horario creado correctamente ✅")
         return redirect('horario_jornada')
 
-    return render(request, 'rrhh/horario_form.html', {
-        'turnos': turnos,
-        'jornadas': jornadas
-    })
-
+    return render(request, 'rrhh/horario_form.html', {'turnos': turnos, 'jornadas': jornadas})
 
 
 @login_required
@@ -581,15 +619,18 @@ def horario_delete(request, pk):
     horario.delete()
     return redirect('horario_jornada')
 
-#CRUD Cargos
 
+# ---------------------------
+# CRUD Cargos
+# ---------------------------
 @login_required
 def gestion_cargos(request):
     q = request.GET.get("q", "").strip()
-    cargos = cargo.objects.all().order_by("id")   # si tu BaseModel filtra por status y no ves nada, usa cargo._base_manager.all()
+    cargos = cargo.objects.all().order_by("id")
     if q:
         cargos = cargos.filter(Q(nombre__icontains=q) | Q(description__icontains=q))
     return render(request, "rrhh/crud_cargo.html", {"cargos": cargos, "q": q})
+
 
 @login_required
 def cargo_create(request):
@@ -602,6 +643,7 @@ def cargo_create(request):
     else:
         form = CargoForm()
     return render(request, "rrhh/cargo_form.html", {"form": form, "title": "Nuevo Cargo"})
+
 
 @login_required
 def cargo_edit(request, pk):
@@ -616,15 +658,16 @@ def cargo_edit(request, pk):
         form = CargoForm(instance=obj)
     return render(request, "rrhh/cargo_form.html", {"form": form, "title": "Editar Cargo"})
 
+
 @login_required
 def cargo_delete(request, pk):
     obj = get_object_or_404(cargo, pk=pk)
     if request.method == "POST":
-        # Si prefieres “borrado lógico”, comenta la línea siguiente y marca status='INACTIVE'
         obj.delete()
         messages.success(request, "Cargo eliminado.")
         return redirect("crud_cargo")
     return render(request, "rrhh/cargo_confirm_delete.html", {"obj": obj})
+
 
 @login_required
 def empleado_cargo_edit(request, pk):

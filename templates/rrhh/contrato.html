@@ -5,71 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mi contrato — Fornería</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <style>
     .brand{color:#dc3545;font-weight:700}
-    .avatar{width:40px;height:40px;border-radius:50%;object-fit:cover}
-    .pdf-frame{width:100%;height:70vh;border:1px solid #e9ecef;border-radius:.5rem}
+    .pdf-frame{width:100%;height:70vh;border:1px solid #e9ecef;border-radius:.5rem;background:#f8f9fa}
+    .badge-state{font-weight:600}
   </style>
 </head>
 <body class="bg-light">
-  <!-- Navbar -->
+  <!-- NAV -->
   <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
     <div class="container-fluid">
       <a class="navbar-brand" href="#"><span class="h4 m-0 brand">Fornería</span></a>
       <div class="ms-auto d-flex align-items-center gap-2">
-        <img src="https://via.placeholder.com/90" alt="mifoto" class="avatar">
-        <span class="fw-semibold">Renato Muñoz</span>
+        <span class="fw-semibold">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <a href="{% url 'dash_empleado' %}" class="btn btn-outline-secondary btn-sm">Volver al dashboard</a>
       </div>
     </div>
   </nav>
 
-  <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4 class="m-0">Mi contrato</h4>
-      <a class="btn btn-outline-secondary btn-sm" href="index.html">Volver al dashboard</a>
-    </div>
-
+  <div class="container-fluid py-4">
     <div class="row g-4">
+      <!-- Col izquierda: resumen -->
       <div class="col-12 col-lg-4">
         <div class="card shadow-sm">
           <div class="card-body">
-            <h5 class="card-title">Resumen</h5>
-            <div class="mb-2"><small class="text-muted d-block">Empleado</small><span>Renato Muñoz</span></div>
-            <div class="mb-2"><small class="text-muted d-block">Cargo</small><span>Analista RRHH</span></div>
-            <div class="mb-2"><small class="text-muted d-block">Tipo</small><span>Indefinido</span></div>
-            <div class="mb-2"><small class="text-muted d-block">Fecha inicio</small><span>01-03-2024</span></div>
-            <div class="mb-2"><small class="text-muted d-block">Última actualización</small><span>15-10-2025</span></div>
-            <div class="mb-3"><small class="text-muted d-block">Estado</small><span class="badge text-bg-success">Vigente</span></div>
+            <h5 class="mb-3">Resumen</h5>
 
-            <div class="d-grid gap-2">
-              <a class="btn btn-primary" id="btnDescargar" href="docs/contratos/renato_munoz.pdf" download>Descargar PDF</a>
-              <button class="btn btn-outline-secondary" id="btnImprimir">Imprimir</button>
-            </div>
+            {% if contrato %}
+              <div class="mb-2">
+                <div class="text-muted small">Empleado</div>
+                <div class="fw-semibold">{{ emp.user.get_full_name|default:emp.user.username }}</div>
+              </div>
+
+              <div class="mb-2">
+                <div class="text-muted small">Cargo</div>
+                <div class="fw-semibold">
+                  {{ contrato.cargo.nombre|default:"—" }}
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <div class="text-muted small">Departamento</div>
+                <div class="fw-semibold">
+                  {{ contrato.departamento.nombre|default:"—" }}
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <div class="text-muted small">Tipo</div>
+                <div class="fw-semibold">{{ contrato.tipo }}</div>
+              </div>
+
+              <div class="row g-2 mb-2">
+                <div class="col">
+                  <div class="text-muted small">Fecha inicio</div>
+                  <div class="fw-semibold">
+                    {{ contrato.fecha_inicio|date:"d-m-Y" }}
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="text-muted small">Fecha fin</div>
+                  <div class="fw-semibold">
+                    {% if contrato.fecha_fin %}{{ contrato.fecha_fin|date:"d-m-Y" }}{% else %}—{% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="text-muted small">Estado</div>
+                {% if contrato.estado == "Vigente" %}
+                  <span class="badge text-bg-success badge-state">Vigente</span>
+                {% elif contrato.estado == "En firma" %}
+                  <span class="badge text-bg-warning badge-state">En firma</span>
+                {% elif contrato.estado == "Finalizado" %}
+                  <span class="badge text-bg-danger badge-state">Finalizado</span>
+                {% else %}
+                  <span class="badge text-bg-secondary badge-state">{{ contrato.estado }}</span>
+                {% endif %}
+              </div>
+
+              <div class="d-grid gap-2">
+                {% if contrato.pdf %}
+                  <a class="btn btn-primary" href="{{ contrato.pdf.url }}" download>Descargar PDF</a>
+                {% else %}
+                  <button class="btn btn-outline-secondary" disabled>Sin PDF adjunto</button>
+                {% endif %}
+                <button class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+              </div>
+            {% else %}
+              <div class="alert alert-info mb-0">
+                Aún no tienes un contrato asignado.
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
 
+      <!-- Col derecha: visor -->
       <div class="col-12 col-lg-8">
         <div class="card shadow-sm">
           <div class="card-body">
-            <h5 class="card-title mb-3">Documento</h5>
-            <!-- Visor PDF -->
-            <iframe class="pdf-frame" id="pdfViewer" src="docs/contratos/renato_munoz.pdf#toolbar=1&navpanes=0"></iframe>
-            <p class="text-muted small mt-2">Si el visor no carga, <a href="docs/contratos/renato_munoz.pdf" target="_blank">abre el PDF en otra pestaña</a>.</p>
+            <h5 class="mb-3">Documento</h5>
+
+            {% if contrato and contrato.pdf %}
+              <iframe class="pdf-frame" src="{{ contrato.pdf.url }}"></iframe>
+              <div class="mt-2 small text-muted">
+                Si el visor no carga, <a href="{{ contrato.pdf.url }}" target="_blank">abre el PDF en otra pestaña</a>.
+              </div>
+            {% else %}
+              <div class="pdf-frame d-flex align-items-center justify-content-center text-muted">
+                Sin PDF adjunto para este contrato.
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
+
     </div>
   </div>
-
-  <script>
-    document.getElementById('btnImprimir').addEventListener('click', () => {
-      // Abrir el PDF en una ventana nueva para imprimir
-      const url = document.getElementById('pdfViewer').getAttribute('src');
-      const w = window.open(url, '_blank');
-      if (w) w.addEventListener('load', () => w.print());
-    });
-  </script>
 </body>
 </html>
-    
