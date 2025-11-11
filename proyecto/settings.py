@@ -22,10 +22,8 @@ SECRET_KEY = os.getenv("SECRET_KEY") or get_random_secret_key()
 
 # Puedes pasar ALLOWED_HOSTS por env: "ip,dominio,otro"
 _ALH = os.getenv("ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = [h.strip() for h in _ALH.split(",") if h.strip()] or [
-    "127.0.0.1",
-    "localhost",
-]
+ALLOWED_HOSTS =os.getenv("DJANGO_ALLOWED_HOSTS","").split(",")
+
 
 # Si expones por IP pública o dominio, completa estas envs en .env
 EC2_IP = os.getenv("EC2_PUBLIC_IP", "").strip()
@@ -95,12 +93,13 @@ WSGI_APPLICATION = "proyecto.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME", "backend"),
-        "USER": os.getenv("DB_USER", "backend"),
-        "PASSWORD": os.getenv("DB_PASSWORD", ""),
-        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "NAME": os.getenv("DB_NAME", "Backend_aws"),
+        "USER": os.getenv("DB_USER", "admin"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "ec2-34-198-90-153.compute-1.amazonaws.com"),#127.0.0.1
         "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {"charset": "utf8mb4"},
+        "OPTIONS": {"charset": "utf8mb4",
+                    "ssl": {"ca": "/etc/ssl/certs/aws-rds/rds-combined-ca-bundle.pem"}},
     }
 }
 
@@ -117,8 +116,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # =========================
 # i18n
 # =========================
-LANGUAGE_CODE = "es-cl"  # ajusta si quieres
-TIME_ZONE = "UTC"        # o "America/Santiago"
+LANGUAGE_CODE =os.getenv("DJANGO_LANGUAGE_CODE", "es-cl")
+TIME_ZONE = os.getenv("DJANGO_TIME_ZONE",
+"America/Santiago")        # o "America/Santiago"
 USE_I18N = True
 USE_TZ = True
 
