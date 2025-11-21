@@ -1,6 +1,5 @@
 Django==5.0.6
 djangorestframework
 python-dotenv
-mysqlclient
 pymysql
 django-widget-tweaks

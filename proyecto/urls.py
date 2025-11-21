@@ -5,12 +5,15 @@ from django.urls import path
 from core import views as v
 from django.contrib.auth import views as auth_views
 from core import views
-from . import views
+from django.urls import include
+
 
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    path('api/',include("api.urls")),
 
     # Páginas
     path('', v.login_page, name='login_page'),

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 from django.urls import reverse_lazy
 
+
 # =========================
 # Rutas base y .env
 # =========================
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
 
     "rest_framework",
+    "api",
     "core",
 ]
 
@@ -95,13 +97,12 @@ WSGI_APPLICATION = "proyecto.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME", "Backend_aws"),
-        "USER": os.getenv("DB_USER", "admin"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST", "ec2-34-198-90-153.compute-1.amazonaws.com"),#127.0.0.1
-        "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {"charset": "utf8mb4",
-                    "ssl": {"ca": "/etc/ssl/certs/aws-rds/rds-combined-ca-bundle.pem"}},
+        "NAME": os.getenv("DB_NAME", "backend") or "backend",
+        "USER": os.getenv("DB_USER", "root") or "root",
+        "PASSWORD": os.getenv("DB_PASSWORD", "") or "",
+        "HOST": os.getenv("DB_HOST", "127.0.0.1") or "127.0.0.1",
+        "PORT": os.getenv("DB_PORT", "3307") or "3307",  # tu MariaDB escucha en 3307
+        "OPTIONS": {"charset": "utf8mb4"},
     }
 }
 
