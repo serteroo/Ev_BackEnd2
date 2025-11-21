@@ -1,6 +1,6 @@
 from rest_framework import viewsets
-from core.models import ZonaTrabajo
-from .serializers import ZonaSerializer
+from core.models import ZonaTrabajo, pago
+from .serializers import ZonaSerializer, PagoSerializer
 from django.http import JsonResponse
 
 
@@ -28,3 +28,7 @@ def info(request):
 class ZoneViewSet(viewsets.ModelViewSet):
     queryset = ZonaTrabajo.objects.all()
     serializer_class = ZonaSerializer
+
+class PagoViewSet(viewsets.ModelViewSet):
+    queryset = pago.objects.all()
+    serializer_class = PagoSerializer
